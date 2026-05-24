@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState, type SVGProps } from "react";
-import { formatCurrency, trips, type Trip } from "../lib/trips";
+import { formatCurrency, trips, type Trip } from "../../lib/trips";
 
 export default function TripsPageClient() {
   const [query, setQuery] = useState("");

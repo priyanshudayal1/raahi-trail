@@ -9,14 +9,15 @@ const Footer: React.FC = () => {
         <div className="grid md:grid-cols-12 gap-12">
           <div className="md:col-span-5">
             <div className="mb-6">
-              <Image
-                alt="Raahi Trail"
-                className="h-14 w-auto rounded-xl object-cover"
-                src="https://customer-assets.emergentagent.com/job_journey-booking-28/artifacts/0mvkbkdr_RAA%E0%A4%B9%E0%A5%80.jpg"
-                width={140}
-                height={56}
-                style={{ width: "auto" }}
-              />
+              <span className="relative block h-14 w-[140px] overflow-hidden rounded-xl">
+                <Image
+                  alt="Raahi Trail"
+                  className="object-cover"
+                  src="https://customer-assets.emergentagent.com/job_journey-booking-28/artifacts/0mvkbkdr_RAA%E0%A4%B9%E0%A5%80.jpg"
+                  fill
+                  sizes="140px"
+                />
+              </span>
             </div>
             <p className="text-white/70 text-lg leading-relaxed max-w-md font-display">
               Plan mat karo. <span className="text-brand-yellow">Bas nikal jao.</span>

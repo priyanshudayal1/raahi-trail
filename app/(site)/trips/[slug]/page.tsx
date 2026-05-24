@@ -8,7 +8,7 @@ import {
   getTripBySlug,
   trips,
   type Trip,
-} from "../../lib/trips";
+} from "../../../lib/trips";
 
 type TripPageProps = {
   params: Promise<{

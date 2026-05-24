@@ -39,15 +39,16 @@ const Header: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 md:h-20">
           <Link data-testid="logo-link" className="flex items-center gap-2 group" href="/">
-            <Image
-              alt="Raahi Trail"
-              className="h-10 md:h-11 w-auto rounded-lg object-cover shadow-sm"
-              src="https://customer-assets.emergentagent.com/job_journey-booking-28/artifacts/0mvkbkdr_RAA%E0%A4%B9%E0%A5%80.jpg"
-              width={110}
-              height={44}
-              preload
-              style={{ width: "auto" }}
-            />
+            <span className="relative block h-10 w-[100px] overflow-hidden rounded-lg shadow-sm md:h-11 md:w-[110px]">
+              <Image
+                alt="Raahi Trail"
+                className="object-cover"
+                src="https://customer-assets.emergentagent.com/job_journey-booking-28/artifacts/0mvkbkdr_RAA%E0%A4%B9%E0%A5%80.jpg"
+                fill
+                preload
+                sizes="110px"
+              />
+            </span>
           </Link>
           
           <nav className="hidden md:flex items-center gap-8">
