@@ -30,7 +30,7 @@ export default function WhyRaahiSection() {
         <div className="grid lg:grid-cols-12 gap-12 lg:gap-20">
           <div className="lg:col-span-5">
             <p className="text-xs uppercase tracking-[0.2em] font-bold text-brand-green mb-3">
-              * Why Raahi Trail
+              ✶ Why Raahi Trail
             </p>
             <h2 className="font-display font-bold text-4xl md:text-5xl lg:text-6xl tracking-tight leading-[1.02]">
               We don&apos;t sell trips.

@@ -44,7 +44,7 @@ const marqueeContainerStyle = {
 const marqueeStyle = {
   "--play": "running",
   "--direction": "normal",
-  "--duration": "78s",
+  "--duration": "77.48571428571428s",
   "--delay": "0s",
   "--iteration-count": "infinite",
   "--min-width": "100%",
@@ -59,9 +59,9 @@ export default function TestimonialsSection() {
     <section className="py-20 md:py-28 bg-brand-paper overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
         <p className="text-xs uppercase tracking-[0.2em] font-bold text-brand-green mb-3">
-          * Real raahis, real stories
+          ✶ Real raahis, real stories
         </p>
-        <h2 className="font-display font-bold text-5xl md:text-6xl lg:text-7xl text-brand-ink tracking-tight leading-none">
+        <h2 className="font-display font-bold text-4xl md:text-5xl lg:text-6xl text-brand-ink tracking-tight leading-none">
           Their words, not ours.
         </h2>
       </div>

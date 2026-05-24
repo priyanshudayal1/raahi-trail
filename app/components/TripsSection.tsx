@@ -1,156 +1,14 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import {
   useMemo,
   useState,
   type ReactNode,
   type SVGProps,
 } from "react";
-
-type Trip = {
-  slug: string;
-  title: string;
-  region: string;
-  destination: string;
-  tagline: string;
-  image: string;
-  durationDays: number;
-  durationNights: number;
-  groupSize: string;
-  date: string;
-  price: number;
-  originalPrice: number;
-};
-
-const trips: Trip[] = [
-  {
-    slug: "kedarkantha-winter-trek",
-    title: "Kedarkantha Winter Trek",
-    region: "Uttarakhand",
-    destination: "Sankri",
-    tagline: "Snow, summit and the best sunrise of your life",
-    image: "https://images.unsplash.com/photo-1551632811-561732d1e306?w=1600",
-    durationDays: 6,
-    durationNights: 5,
-    groupSize: "12-20",
-    date: "15 Jan 2027",
-    price: 8999,
-    originalPrice: 10999,
-  },
-  {
-    slug: "spiti-valley-circuit",
-    title: "Spiti Valley Circuit",
-    region: "Himachal Pradesh",
-    destination: "Spiti",
-    tagline: "Middle-land of monks, moonscapes and maddening views",
-    image: "https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?w=1600",
-    durationDays: 8,
-    durationNights: 7,
-    groupSize: "8-14",
-    date: "12 Jun 2026",
-    price: 18999,
-    originalPrice: 22999,
-  },
-  {
-    slug: "ladakh-road-trip",
-    title: "Ladakh Road Trip",
-    region: "Ladakh",
-    destination: "Leh",
-    tagline: "High passes, higher dopamine",
-    image: "https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?w=1600",
-    durationDays: 9,
-    durationNights: 8,
-    groupSize: "8-12",
-    date: "10 Jul 2026",
-    price: 24999,
-    originalPrice: 29999,
-  },
-  {
-    slug: "meghalaya-monsoon-trail",
-    title: "Meghalaya Monsoon Trail",
-    region: "Meghalaya",
-    destination: "Cherrapunji",
-    tagline: "Living root bridges, rain songs and cloud-soft mornings",
-    image: "https://images.unsplash.com/photo-1598324789736-4861f89564a0?w=1600",
-    durationDays: 7,
-    durationNights: 6,
-    groupSize: "10-16",
-    date: "22 Aug 2026",
-    price: 21999,
-    originalPrice: 25999,
-  },
-  {
-    slug: "tirthan-valley-retreat",
-    title: "Tirthan Valley Retreat",
-    region: "Himachal Pradesh",
-    destination: "Tirthan",
-    tagline: "Riverside cabins, forest walks and slow mountain days",
-    image: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1600",
-    durationDays: 4,
-    durationNights: 3,
-    groupSize: "10-18",
-    date: "18 Sep 2026",
-    price: 9999,
-    originalPrice: 12499,
-  },
-  {
-    slug: "goa-workation-escape",
-    title: "Goa Workation Escape",
-    region: "Goa",
-    destination: "Assagao",
-    tagline: "Emails by day, sunsets by design",
-    image: "https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?w=1600",
-    durationDays: 5,
-    durationNights: 4,
-    groupSize: "8-14",
-    date: "07 Oct 2026",
-    price: 14999,
-    originalPrice: 17999,
-  },
-  {
-    slug: "zanskar-frozen-river",
-    title: "Zanskar Winter Expedition",
-    region: "Ladakh",
-    destination: "Zanskar",
-    tagline: "Frozen trails, monastery stays and serious bragging rights",
-    image: "https://images.unsplash.com/photo-1581793746485-04698e79a4e8?w=1600",
-    durationDays: 8,
-    durationNights: 7,
-    groupSize: "6-10",
-    date: "05 Feb 2027",
-    price: 28999,
-    originalPrice: 34999,
-  },
-  {
-    slug: "rishikesh-river-weekend",
-    title: "Rishikesh River Weekend",
-    region: "Uttarakhand",
-    destination: "Rishikesh",
-    tagline: "Rafting, cafes and a quick reset by the Ganga",
-    image: "https://images.unsplash.com/photo-1586257244039-acc6f8c9d30b?w=1600",
-    durationDays: 3,
-    durationNights: 2,
-    groupSize: "12-24",
-    date: "14 Nov 2026",
-    price: 6999,
-    originalPrice: 8499,
-  },
-  {
-    slug: "andaman-blue-trail",
-    title: "Andaman Blue Trail",
-    region: "Andaman",
-    destination: "Havelock",
-    tagline: "Clear water, quiet beaches and no spreadsheet energy",
-    image: "https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=1600",
-    durationDays: 6,
-    durationNights: 5,
-    groupSize: "8-14",
-    date: "12 Dec 2026",
-    price: 26999,
-    originalPrice: 31999,
-  },
-];
+import { formatCurrency, trips, type Trip } from "../lib/trips";
 
 const tripsPerPage = 6;
 
@@ -271,9 +129,9 @@ export default function TripsSection() {
                 onChange={updateBudget}
                 options={[
                   { value: "all", label: "Any budget" },
-                  { value: "under-10000", label: "Under ₹10k" },
-                  { value: "10000-20000", label: "₹10k-₹20k" },
-                  { value: "over-20000", label: "₹20k+" },
+                  { value: "under-10000", label: "Under Rs 10k" },
+                  { value: "10000-20000", label: "Rs 10k-Rs 20k" },
+                  { value: "over-20000", label: "Rs 20k+" },
                 ]}
               />
               <SelectField
@@ -297,7 +155,7 @@ export default function TripsSection() {
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-12">
             <div>
               <p className="text-xs uppercase tracking-[0.2em] font-bold text-brand-green mb-3">
-                * Featured escapes
+                ✶ Featured escapes
               </p>
               <h2 className="font-display font-bold text-4xl md:text-5xl lg:text-6xl text-brand-ink tracking-tight leading-none">
                 The ones <em className="not-italic text-brand-green">everyone</em>
@@ -389,9 +247,10 @@ function TripCard({ trip }: { trip: Trip }) {
   );
 
   return (
-    <article
+    <Link
       data-testid={`trip-card-${trip.slug}`}
       className="group block bg-white rounded-3xl overflow-hidden border border-black/5 hover:border-black/10 transition-all hover:-translate-y-1 hover:shadow-2xl duration-500"
+      href={`/trips/${trip.slug}`}
     >
       <div className="relative aspect-[4/3] overflow-hidden">
         <Image
@@ -451,7 +310,7 @@ function TripCard({ trip }: { trip: Trip }) {
           </span>
         </div>
       </div>
-    </article>
+    </Link>
   );
 }
 
@@ -512,14 +371,6 @@ function PaginationButton({
       {children}
     </button>
   );
-}
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0,
-  }).format(value);
 }
 
 function ArrowRightIcon(props: SVGProps<SVGSVGElement>) {

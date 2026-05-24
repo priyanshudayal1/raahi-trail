@@ -44,7 +44,7 @@ export default function AboutPage() {
         </div>
         <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <p className="text-xs uppercase tracking-[0.2em] font-bold text-brand-green mb-4">
-            * Our story
+            &#10038; Our story
           </p>
           <h1 className="font-display font-bold text-5xl md:text-7xl lg:text-[6rem] tracking-tight leading-[0.95] max-w-4xl">
             We built Raahi Trail because{" "}
@@ -60,7 +60,7 @@ export default function AboutPage() {
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 grid md:grid-cols-12 gap-10">
           <div className="md:col-span-4">
             <p className="text-xs uppercase tracking-[0.2em] font-bold text-brand-green mb-3">
-              * Our mission
+              &#10038; Our mission
             </p>
             <h2 className="font-display font-bold text-3xl md:text-4xl text-brand-ink leading-tight tracking-tight">
               Make travel{" "}
@@ -76,9 +76,9 @@ export default function AboutPage() {
               another.
             </p>
             <p>
-              We design trips for the way we love to travel: small groups, real
-              stays, hidden corners, no cookie-cutter itineraries. Just show up
-              with curiosity. We&apos;ll handle the rest.
+              We design trips for the way we love to travel &mdash; small
+              groups, real stays, hidden corners, no cookie-cutter itineraries.
+              Just show up with curiosity. We&apos;ll handle the rest.
             </p>
             <p className="font-display text-brand-ink text-2xl md:text-3xl leading-tight">
               <span className="text-brand-green">&quot;Yeh trip nahi,</span>{" "}
@@ -99,12 +99,12 @@ export default function AboutPage() {
               src="https://images.unsplash.com/photo-1676623386862-f884e1e4223c?w=1200"
             />
             <div className="absolute bottom-5 left-5 bg-white px-4 py-2 rounded-full text-sm font-semibold">
-              - Arjun, Founder
+              &mdash; Arjun, Founder
             </div>
           </div>
           <div>
             <p className="text-xs uppercase tracking-[0.2em] font-bold text-brand-green mb-3">
-              * Founder&apos;s note
+              &#10038; Founder&apos;s note
             </p>
             <h2 className="font-display font-bold text-4xl md:text-5xl text-brand-ink tracking-tight leading-tight mb-6">
               Solo trip se shuruat. Community tak pahunche.
@@ -117,15 +117,15 @@ export default function AboutPage() {
               </p>
               <p>
                 Back home, friends kept asking &quot;Bhai, agli trip kab plan
-                kar raha hai?&quot; - and I realized most people don&apos;t hate
-                travel; they hate planning it. So I stopped saying no and
+                kar raha hai?&quot; &mdash; and I realized most people don&apos;t
+                hate travel; they hate planning it. So I stopped saying no and
                 started running small group trips. One became ten. Ten became
                 Raahi Trail.
               </p>
               <p>
                 Today we&apos;re a crew of travelers, trek leaders, chefs, and
-                locals. Our only job? Make sure you come back with stories, not
-                receipts.
+                locals. Our only job? Make sure you come back with stories
+                &mdash; not receipts.
               </p>
             </div>
           </div>
@@ -135,7 +135,7 @@ export default function AboutPage() {
       <section className="py-20 md:py-32 bg-brand-ink text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <p className="text-xs uppercase tracking-[0.2em] font-bold text-brand-green mb-3">
-            * What we stand for
+            &#10038; What we stand for
           </p>
           <h2 className="font-display font-bold text-4xl md:text-6xl tracking-tight mb-14 max-w-3xl leading-[0.95]">
             Three things we&apos;ll{" "}

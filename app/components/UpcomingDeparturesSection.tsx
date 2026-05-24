@@ -65,7 +65,7 @@ export default function UpcomingDeparturesSection() {
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-12">
           <div>
             <p className="text-xs uppercase tracking-[0.2em] font-bold text-brand-green mb-3">
-              * Upcoming departures
+              ✶ Upcoming departures
             </p>
             <h2 className="font-display font-bold text-4xl md:text-5xl lg:text-6xl text-brand-ink tracking-tight leading-none">
               Kab nikalna hai?
@@ -81,7 +81,7 @@ export default function UpcomingDeparturesSection() {
               key={trip.slug}
               data-testid={`upcoming-${trip.slug}`}
               className="group grid grid-cols-12 items-center gap-4 p-4 md:p-6 rounded-2xl border border-black/5 hover:border-brand-ink hover:bg-brand-paper transition-all"
-              href="#trips"
+              href={`/trips/${trip.slug}`}
             >
               <div className="col-span-12 sm:col-span-2 flex sm:flex-col items-center sm:items-start gap-3 sm:gap-0">
                 <p className="font-display text-4xl font-bold text-brand-ink leading-none">

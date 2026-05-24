@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import type { SVGProps } from "react";
 
 const whatsappHref =
@@ -16,7 +17,7 @@ export default function HomeImageBand() {
       />
       <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         <p className="text-xs uppercase tracking-[0.2em] font-bold text-brand-green mb-5">
-          * Confused what to do?
+          ✶ Confused what to do?
         </p>
         <h2 className="font-display font-bold text-5xl md:text-6xl lg:text-7xl tracking-tight leading-[0.95]">
           Confused what to do next?
@@ -27,13 +28,13 @@ export default function HomeImageBand() {
           DM, ping, WhatsApp - whichever is your vibe. Hum vahaan hai.
         </p>
         <div className="mt-10 flex flex-col sm:flex-row gap-3 justify-center">
-          <a
+          <Link
             data-testid="cta-browse-btn"
             className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full bg-brand-yellow text-brand-ink font-semibold hover:bg-white transition-all active:scale-95"
-            href="#trips"
+            href="/trips"
           >
             Browse all trips <ArrowRightIcon />
-          </a>
+          </Link>
           <a
             href={whatsappHref}
             target="_blank"

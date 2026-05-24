@@ -86,27 +86,44 @@ export default function ContactPage() {
             <p className="text-brand-ink/60 mb-6 text-sm">
               We&apos;ll read it with our morning chai.
             </p>
-            <form className="space-y-4">
+            <form
+              className="space-y-4"
+              action="mailto:hello@raahitrail.com"
+              method="post"
+              encType="text/plain"
+            >
               <div className="grid sm:grid-cols-2 gap-4">
                 <Field
                   label="Name"
+                  name="name"
                   type="text"
                   testId="contact-name"
                   required
                 />
-                <Field label="Phone" type="tel" testId="contact-phone" />
+                <Field
+                  label="Phone"
+                  name="phone"
+                  type="tel"
+                  testId="contact-phone"
+                />
               </div>
               <Field
                 label="Email"
+                name="email"
                 type="email"
                 testId="contact-email"
                 required
               />
               <div>
-                <label className="text-xs uppercase tracking-widest font-bold text-brand-ink/60 mb-2 block">
+                <label
+                  htmlFor="contact-message"
+                  className="text-xs uppercase tracking-widest font-bold text-brand-ink/60 mb-2 block"
+                >
                   Message
                 </label>
                 <textarea
+                  id="contact-message"
+                  name="message"
                   data-testid="contact-message"
                   rows={5}
                   required
@@ -114,6 +131,7 @@ export default function ContactPage() {
                 />
               </div>
               <button
+                type="submit"
                 data-testid="contact-submit"
                 className="w-full sm:w-auto px-8 py-4 rounded-full bg-brand-yellow text-brand-ink font-semibold hover:bg-brand-ink hover:text-brand-yellow transition active:scale-95 disabled:opacity-60"
               >
@@ -166,21 +184,28 @@ export default function ContactPage() {
 
 function Field({
   label,
+  name,
   type,
   testId,
   required,
 }: {
   label: string;
+  name: string;
   type: string;
   testId: string;
   required?: boolean;
 }) {
   return (
     <div>
-      <label className="text-xs uppercase tracking-widest font-bold text-brand-ink/60 mb-2 block">
+      <label
+        htmlFor={testId}
+        className="text-xs uppercase tracking-widest font-bold text-brand-ink/60 mb-2 block"
+      >
         {label}
       </label>
       <input
+        id={testId}
+        name={name}
         data-testid={testId}
         required={required}
         className="w-full px-4 py-3 rounded-2xl border border-black/10 bg-brand-paper focus:border-brand-ink focus:bg-white outline-none text-sm"

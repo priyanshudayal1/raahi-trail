@@ -25,7 +25,7 @@ export default function HomeHero() {
       <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/20 to-black/85" />
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20 md:pb-28 pt-32 w-full">
         <p className="text-brand-green uppercase tracking-[0.3em] text-xs md:text-sm font-bold mb-6">
-          * Curated Group Trips · Since 2023
+          ✶ Curated Group Trips · Since 2023
         </p>
         <h1 className="font-display text-white text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold leading-[0.95] tracking-tight max-w-5xl">
           Stop Planning.
@@ -40,7 +40,7 @@ export default function HomeHero() {
           <Link
             data-testid="hero-explore-btn"
             className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full bg-brand-yellow text-brand-ink font-semibold hover:bg-white transition-all active:scale-95"
-            href="#trips"
+            href="/trips"
           >
             Explore Trips <ArrowRightIcon />
           </Link>
