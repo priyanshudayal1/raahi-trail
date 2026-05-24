@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getTripsFromDb } from "../../lib/tripsDb";
+import { getTripDestinationsFromDb, queryTripsFromDb } from "../../lib/tripsDb";
 import TripsPageClient from "./TripsPageClient";
 
 export const metadata: Metadata = {
@@ -9,7 +9,15 @@ export const metadata: Metadata = {
 };
 
 export default async function TripsPage() {
-  const trips = await getTripsFromDb();
+  const [initialResult, destinations] = await Promise.all([
+    queryTripsFromDb({ page: 1, pageSize: 9 }),
+    getTripDestinationsFromDb(),
+  ]);
 
-  return <TripsPageClient trips={trips} />;
+  return (
+    <TripsPageClient
+      destinations={destinations}
+      initialResult={initialResult}
+    />
+  );
 }

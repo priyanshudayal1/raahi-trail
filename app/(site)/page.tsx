@@ -5,10 +5,10 @@ import TestimonialsSection from "../components/TestimonialsSection";
 import TripsSection from "../components/TripsSection";
 import UpcomingDeparturesSection from "../components/UpcomingDeparturesSection";
 import WhyRaahiSection from "../components/WhyRaahiSection";
-import { getTripsFromDb } from "../lib/tripsDb";
+import { queryTripsFromDb } from "../lib/tripsDb";
 
 export default async function Home() {
-  const trips = await getTripsFromDb();
+  const { trips } = await queryTripsFromDb({ page: 1, pageSize: 6 });
 
   return (
     <>

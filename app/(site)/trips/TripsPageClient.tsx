@@ -2,62 +2,87 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState, type SVGProps } from "react";
+import { useEffect, useState, type ReactNode, type SVGProps } from "react";
 import { formatCurrency, type Trip } from "../../lib/trips";
+import type { TripQueryResult } from "../../lib/tripsDb";
 
-export default function TripsPageClient({ trips }: { trips: Trip[] }) {
+const tripsPerPage = 9;
+
+export default function TripsPageClient({
+  destinations,
+  initialResult,
+}: {
+  destinations: string[];
+  initialResult: TripQueryResult;
+}) {
+  const [trips, setTrips] = useState(initialResult.trips);
+  const [total, setTotal] = useState(initialResult.total);
+  const [page, setPage] = useState(initialResult.page);
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [destination, setDestination] = useState("all");
   const [budget, setBudget] = useState("all");
   const [duration, setDuration] = useState("all");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const destinations = useMemo(
-    () => Array.from(new Set(trips.map((trip) => trip.destination))).sort(),
-    [trips],
-  );
+  const pageCount = Math.max(1, Math.ceil(total / tripsPerPage));
 
-  const filteredTrips = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setDebouncedQuery(query);
+      setPage(1);
+    }, 350);
 
-    return trips.filter((trip) => {
-      const searchable = [
-        trip.title,
-        trip.region,
-        trip.destination,
-        trip.tagline,
-      ]
-        .join(" ")
-        .toLowerCase();
-      const matchesQuery =
-        normalizedQuery.length === 0 || searchable.includes(normalizedQuery);
-      const matchesDestination =
-        destination === "all" || trip.destination === destination;
-      const matchesBudget =
-        budget === "all" ||
-        (budget === "under-10000" && trip.price < 10000) ||
-        (budget === "10000-20000" &&
-          trip.price >= 10000 &&
-          trip.price <= 20000) ||
-        (budget === "over-20000" && trip.price > 20000);
-      const matchesDuration =
-        duration === "all" ||
-        (duration === "short" && trip.durationDays <= 4) ||
-        (duration === "medium" &&
-          trip.durationDays >= 5 &&
-          trip.durationDays <= 7) ||
-        (duration === "long" && trip.durationDays >= 8);
+    return () => window.clearTimeout(timeout);
+  }, [query]);
 
-      return (
-        matchesQuery && matchesDestination && matchesBudget && matchesDuration
-      );
-    });
-  }, [budget, destination, duration, query, trips]);
+  useEffect(() => {
+    let ignore = false;
+
+    async function fetchTrips() {
+      setIsLoading(true);
+      setError("");
+
+      const params = new URLSearchParams({
+        budget,
+        destination,
+        duration,
+        page: String(page),
+        pageSize: String(tripsPerPage),
+        search: debouncedQuery,
+      });
+      const response = await fetch(`/api/trips?${params.toString()}`);
+      const data = (await response.json()) as TripQueryResult & { error?: string };
+
+      if (ignore) {
+        return;
+      }
+
+      setIsLoading(false);
+
+      if (!response.ok) {
+        setError(data.error ?? "Unable to load trips.");
+        return;
+      }
+
+      setTrips(data.trips);
+      setTotal(data.total);
+    }
+
+    void fetchTrips();
+
+    return () => {
+      ignore = true;
+    };
+  }, [budget, debouncedQuery, destination, duration, page]);
 
   function resetFilters() {
     setQuery("");
     setDestination("all");
     setBudget("all");
     setDuration("all");
+    setPage(1);
   }
 
   return (
@@ -71,7 +96,7 @@ export default function TripsPageClient({ trips }: { trips: Trip[] }) {
             Pick your <em className="not-italic text-brand-green">next escape.</em>
           </h1>
           <p className="mt-5 text-brand-ink/60 text-lg max-w-2xl">
-            {trips.length}+ curated journeys across India. Filter karo, pick
+            {total}+ curated journeys across India. Filter karo, pick
             karo, niklo.
           </p>
         </div>
@@ -94,7 +119,10 @@ export default function TripsPageClient({ trips }: { trips: Trip[] }) {
               <SelectField
                 testId="filter-destination"
                 value={destination}
-                onChange={setDestination}
+                onChange={(value) => {
+                  setDestination(value);
+                  setPage(1);
+                }}
                 options={[
                   { value: "all", label: "All destinations" },
                   ...destinations.map((item) => ({
@@ -106,7 +134,10 @@ export default function TripsPageClient({ trips }: { trips: Trip[] }) {
               <SelectField
                 testId="filter-budget"
                 value={budget}
-                onChange={setBudget}
+                onChange={(value) => {
+                  setBudget(value);
+                  setPage(1);
+                }}
                 options={[
                   { value: "all", label: "Any budget" },
                   { value: "under-10000", label: "Under Rs 10k" },
@@ -117,7 +148,10 @@ export default function TripsPageClient({ trips }: { trips: Trip[] }) {
               <SelectField
                 testId="filter-duration"
                 value={duration}
-                onChange={setDuration}
+                onChange={(value) => {
+                  setDuration(value);
+                  setPage(1);
+                }}
                 options={[
                   { value: "all", label: "Any length" },
                   { value: "short", label: "2-4 days" },
@@ -134,14 +168,22 @@ export default function TripsPageClient({ trips }: { trips: Trip[] }) {
         <p className="text-sm text-brand-ink/60 mb-6">
           Showing{" "}
           <span className="font-semibold text-brand-ink">
-            {filteredTrips.length}
+            {total}
           </span>{" "}
-          trip{filteredTrips.length === 1 ? "" : "s"}
+          trip{total === 1 ? "" : "s"}
         </p>
+        {isLoading ? (
+          <p className="text-sm font-semibold text-brand-ink/60 mb-6">
+            Loading trips...
+          </p>
+        ) : null}
+        {error ? (
+          <p className="text-sm font-semibold text-red-600 mb-6">{error}</p>
+        ) : null}
 
-        {filteredTrips.length > 0 ? (
+        {trips.length > 0 ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-            {filteredTrips.map((trip) => (
+            {trips.map((trip) => (
               <TripCard key={trip.slug} trip={trip} />
             ))}
           </div>
@@ -162,6 +204,42 @@ export default function TripsPageClient({ trips }: { trips: Trip[] }) {
             </button>
           </div>
         )}
+
+        {total > tripsPerPage ? (
+          <div className="mt-12 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p className="text-sm text-brand-ink/60">
+              Showing {(page - 1) * tripsPerPage + 1}-
+              {Math.min(page * tripsPerPage, total)} of {total} trips
+            </p>
+            <div className="flex items-center gap-2">
+              <PaginationButton
+                disabled={page === 1}
+                onClick={() => setPage((current) => Math.max(1, current - 1))}
+              >
+                Previous
+              </PaginationButton>
+              {Array.from({ length: pageCount }, (_, index) => index + 1).map(
+                (pageNumber) => (
+                  <PaginationButton
+                    key={pageNumber}
+                    active={pageNumber === page}
+                    onClick={() => setPage(pageNumber)}
+                  >
+                    {pageNumber}
+                  </PaginationButton>
+                ),
+              )}
+              <PaginationButton
+                disabled={page === pageCount}
+                onClick={() =>
+                  setPage((current) => Math.min(pageCount, current + 1))
+                }
+              >
+                Next
+              </PaginationButton>
+            </div>
+          </div>
+        ) : null}
       </section>
     </div>
   );
@@ -267,6 +345,35 @@ function SelectField({
       </select>
       <ChevronDownIcon className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" />
     </div>
+  );
+}
+
+function PaginationButton({
+  active,
+  disabled,
+  onClick,
+  children,
+}: {
+  active?: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className={[
+        "min-w-10 rounded-full px-4 py-2 text-sm font-semibold transition",
+        active
+          ? "bg-brand-ink text-white"
+          : "bg-white text-brand-ink border border-black/10 hover:border-brand-ink",
+        disabled ? "cursor-not-allowed opacity-40 hover:border-black/10" : "",
+      ].join(" ")}
+    >
+      {children}
+    </button>
   );
 }
 

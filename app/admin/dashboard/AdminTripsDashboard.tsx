@@ -1,100 +1,91 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useMemo, useState, type FormEvent, type SVGProps } from "react";
+import { useEffect, useMemo, useState, type ReactNode, type SVGProps } from "react";
 import { formatCurrency, type Trip } from "../../lib/trips";
+import type { TripQueryResult } from "../../lib/tripsDb";
 
-type TripDraft = {
-  slug: string;
-  title: string;
-  region: string;
-  destination: string;
-  tagline: string;
-  image: string;
-  imagePublicId: string;
-  durationDays: string;
-  durationNights: string;
-  groupSize: string;
-  date: string;
-  price: string;
-  originalPrice: string;
-  difficulty: string;
-  stay: string;
-  meetingPoint: string;
-  highlights: string;
-  included: string;
-  excluded: string;
-  itinerary: string;
-  gallery: string;
-  galleryPublicIds: string;
-};
-
-const emptyDraft: TripDraft = {
-  slug: "",
-  title: "",
-  region: "",
-  destination: "",
-  tagline: "",
-  image: "",
-  imagePublicId: "",
-  durationDays: "3",
-  durationNights: "2",
-  groupSize: "8-14",
-  date: "",
-  price: "",
-  originalPrice: "",
-  difficulty: "Easy",
-  stay: "",
-  meetingPoint: "",
-  highlights: "",
-  included: "",
-  excluded: "",
-  itinerary: "1 | Arrival and briefing | Meet the crew, settle in, and get the trip briefing.",
-  gallery: "",
-  galleryPublicIds: "",
-};
+const tripsPerPage = 6;
 
 export default function AdminTripsDashboard({
-  initialTrips,
+  destinations,
+  initialResult,
   username,
 }: {
-  initialTrips: Trip[];
+  destinations: string[];
+  initialResult: TripQueryResult;
   username: string;
 }) {
-  const router = useRouter();
-  const [trips, setTrips] = useState<Trip[]>(initialTrips);
-  const [selectedSlug, setSelectedSlug] = useState(initialTrips[0]?.slug ?? "");
-  const [draft, setDraft] = useState<TripDraft>(() => tripToDraft(initialTrips[0]));
+  const [trips, setTrips] = useState(initialResult.trips);
+  const [page, setPage] = useState(initialResult.page);
+  const [total, setTotal] = useState(initialResult.total);
+  const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [destination, setDestination] = useState("all");
+  const [budget, setBudget] = useState("all");
+  const [duration, setDuration] = useState("all");
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const selectedTrip = useMemo(
-    () => trips.find((trip) => trip.slug === selectedSlug),
-    [selectedSlug, trips],
+  const pageCount = Math.max(1, Math.ceil(total / tripsPerPage));
+  const averagePrice = useMemo(
+    () =>
+      trips.length > 0
+        ? Math.round(trips.reduce((sum, trip) => sum + trip.price, 0) / trips.length)
+        : 0,
+    [trips],
   );
 
-  const totalSeatsLabel = `${trips.length} active trip${trips.length === 1 ? "" : "s"}`;
-  const averagePrice =
-    trips.length > 0
-      ? Math.round(trips.reduce((sum, trip) => sum + trip.price, 0) / trips.length)
-      : 0;
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setDebouncedQuery(query);
+      setPage(1);
+    }, 350);
 
-  function updateDraft(field: keyof TripDraft, value: string) {
-    setDraft((current) => ({ ...current, [field]: value }));
-  }
+    return () => window.clearTimeout(timeout);
+  }, [query]);
 
-  function selectTrip(trip: Trip) {
-    setSelectedSlug(trip.slug);
-    setDraft(tripToDraft(trip));
-  }
+  useEffect(() => {
+    let ignore = false;
 
-  function startNewTrip() {
-    setSelectedSlug("");
-    setDraft(emptyDraft);
-  }
+    async function fetchTrips() {
+      setIsLoading(true);
+      setError("");
+
+      const params = new URLSearchParams({
+        budget,
+        destination,
+        duration,
+        page: String(page),
+        pageSize: String(tripsPerPage),
+        search: debouncedQuery,
+      });
+      const response = await fetch(`/api/admin/trips?${params.toString()}`);
+      const data = (await response.json()) as TripQueryResult & { error?: string };
+
+      if (ignore) {
+        return;
+      }
+
+      setIsLoading(false);
+
+      if (!response.ok) {
+        setError(data.error ?? "Unable to fetch trips.");
+        return;
+      }
+
+      setTrips(data.trips);
+      setTotal(data.total);
+    }
+
+    void fetchTrips();
+
+    return () => {
+      ignore = true;
+    };
+  }, [budget, debouncedQuery, destination, duration, page]);
 
   async function resetSeedData() {
     setError("");
@@ -109,11 +100,10 @@ export default function AdminTripsDashboard({
       return;
     }
 
-    setTrips(data.trips);
-    setSelectedSlug(data.trips[0]?.slug ?? "");
-    setDraft(tripToDraft(data.trips[0]));
+    setTrips(data.trips.slice(0, tripsPerPage));
+    setTotal(data.trips.length);
+    setPage(1);
     setStatus("Seed data saved to Firebase.");
-    router.refresh();
   }
 
   async function deleteTrip(slug: string) {
@@ -131,161 +121,14 @@ export default function AdminTripsDashboard({
       return;
     }
 
-    const nextTrips = trips.filter((trip) => trip.slug !== slug);
-    setTrips(nextTrips);
-
-    if (selectedSlug === slug) {
-      setSelectedSlug(nextTrips[0]?.slug ?? "");
-      setDraft(nextTrips[0] ? tripToDraft(nextTrips[0]) : emptyDraft);
-    }
-
+    setTrips((current) => current.filter((trip) => trip.slug !== slug));
+    setTotal((current) => Math.max(0, current - 1));
     setStatus("Trip deleted from Firebase.");
-    router.refresh();
-  }
-
-  async function uploadImage(file: File, kind: "card" | "gallery") {
-    setError("");
-    setStatus(`Uploading ${kind === "card" ? "card" : "gallery"} image...`);
-    setIsUploading(true);
-
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("kind", kind);
-    formData.append("slug", draft.slug || slugify(draft.title) || "draft");
-
-    const response = await fetch("/api/admin/images", {
-      method: "POST",
-      body: formData,
-    });
-    const data = (await response.json()) as {
-      url?: string;
-      publicId?: string;
-      error?: string;
-    };
-
-    setIsUploading(false);
-
-    if (!response.ok || !data.url || !data.publicId) {
-      setStatus("");
-      setError(data.error ?? "Unable to upload image.");
-      return;
-    }
-
-    if (kind === "card") {
-      if (draft.imagePublicId) {
-        await deleteImageByPublicId(draft.imagePublicId);
-      }
-
-      setDraft((current) => ({
-        ...current,
-        image: data.url!,
-        imagePublicId: data.publicId!,
-      }));
-    } else {
-      setDraft((current) => ({
-        ...current,
-        gallery: [...toLines(current.gallery), data.url!].join("\n"),
-        galleryPublicIds: [...toLines(current.galleryPublicIds), data.publicId!].join("\n"),
-      }));
-    }
-
-    setStatus("Image uploaded to Cloudinary.");
-  }
-
-  async function deleteImageByPublicId(publicId: string) {
-    if (!publicId) {
-      return true;
-    }
-
-    const response = await fetch("/api/admin/images", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ publicId }),
-    });
-    const data = (await response.json()) as { error?: string };
-
-    if (!response.ok) {
-      setError(data.error ?? "Unable to delete image.");
-      return false;
-    }
-
-    return true;
-  }
-
-  async function removeCardImage() {
-    setError("");
-    const deleted = await deleteImageByPublicId(draft.imagePublicId);
-
-    if (!deleted) {
-      return;
-    }
-
-    setDraft((current) => ({
-      ...current,
-      image: "",
-      imagePublicId: "",
-    }));
-    setStatus("Card image removed from Cloudinary.");
-  }
-
-  async function removeGalleryImage(index: number) {
-    setError("");
-    const gallery = toLines(draft.gallery);
-    const publicIds = toLines(draft.galleryPublicIds);
-    const deleted = await deleteImageByPublicId(publicIds[index]);
-
-    if (!deleted) {
-      return;
-    }
-
-    gallery.splice(index, 1);
-    publicIds.splice(index, 1);
-
-    setDraft((current) => ({
-      ...current,
-      gallery: gallery.join("\n"),
-      galleryPublicIds: publicIds.join("\n"),
-    }));
-    setStatus("Gallery image removed from Cloudinary.");
-  }
-
-  async function saveTrip(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError("");
-    setStatus("");
-    setIsSaving(true);
-
-    const trip = draftToTrip(draft);
-    const response = await fetch("/api/admin/trips", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ trip, previousSlug: selectedSlug || undefined }),
-    });
-    const data = (await response.json()) as { trip?: Trip; error?: string };
-
-    setIsSaving(false);
-
-    if (!response.ok || !data.trip) {
-      setError(data.error ?? "Unable to save trip.");
-      return;
-    }
-
-    const exists = trips.some((item) => item.slug === selectedSlug);
-    const nextTrips = exists
-      ? trips.map((item) => (item.slug === selectedSlug ? data.trip! : item))
-      : [data.trip, ...trips];
-
-    setTrips(nextTrips);
-    setSelectedSlug(data.trip.slug);
-    setDraft(tripToDraft(data.trip));
-    setStatus("Trip saved to Firebase.");
-    router.refresh();
   }
 
   async function logout() {
     await fetch("/api/admin/logout", { method: "POST" });
-    router.push("/admin/login");
-    router.refresh();
+    window.location.href = "/admin/login";
   }
 
   return (
@@ -302,24 +145,22 @@ export default function AdminTripsDashboard({
               </h1>
               <p className="mt-3 text-brand-ink/60 max-w-2xl">
                 Signed in as <span className="font-semibold">{username}</span>.
-                Manage the same trip details shown on the public trip listing
-                and trip detail pages.
+                Manage trips from Firebase, with Cloudinary-backed media cleanup.
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
-              <button
-                type="button"
-                onClick={startNewTrip}
+              <Link
+                href="/admin/dashboard/trips/new"
                 className="inline-flex items-center gap-2 px-5 py-3 rounded-full bg-brand-yellow text-brand-ink font-semibold hover:bg-brand-ink hover:text-brand-yellow transition"
               >
                 <PlusIcon /> Add trip
-              </button>
+              </Link>
               <button
                 type="button"
                 onClick={resetSeedData}
                 className="inline-flex items-center gap-2 px-5 py-3 rounded-full bg-white border border-black/10 text-brand-ink font-semibold hover:border-brand-ink transition"
               >
-                <RefreshIcon /> Reset
+                <RefreshIcon /> Seed trips
               </button>
               <button
                 type="button"
@@ -332,13 +173,14 @@ export default function AdminTripsDashboard({
           </div>
 
           <div className="grid sm:grid-cols-3 gap-4 mt-8">
-            <Stat label="Trips" value={totalSeatsLabel} />
+            <Stat label="Trips" value={`${total} matching`} />
             <Stat label="Average price" value={formatCurrency(averagePrice)} />
             <Stat
-              label="Selected"
-              value={selectedTrip?.title ?? "New trip draft"}
+              label="Page"
+              value={`${Math.min(page, pageCount)} of ${pageCount}`}
             />
           </div>
+
           {status || error ? (
             <p
               className={`mt-5 rounded-2xl px-4 py-3 text-sm font-semibold ${
@@ -351,356 +193,225 @@ export default function AdminTripsDashboard({
         </div>
       </section>
 
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 grid xl:grid-cols-12 gap-6">
-        <aside className="xl:col-span-4 space-y-3">
-          {trips.map((trip) => (
-            <div
-              key={trip.slug}
-              className={`bg-white border p-4 rounded-2xl transition ${
-                selectedSlug === trip.slug ? "border-brand-green" : "border-black/5"
-              }`}
-            >
-              <button
-                type="button"
-                onClick={() => selectTrip(trip)}
-                className="w-full text-left"
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-8 rounded-3xl border border-black/5 bg-white/80 p-3">
+          <div className="flex flex-col lg:flex-row gap-3">
+            <div className="relative flex-1">
+              <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-ink/40" />
+              <input
+                placeholder="Search trips..."
+                className="w-full pl-11 pr-4 py-3 rounded-full border border-black/10 bg-white focus:border-brand-ink outline-none text-sm"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+              />
+            </div>
+            <div className="grid sm:grid-cols-3 gap-3">
+              <SelectField
+                value={destination}
+                onChange={(value) => {
+                  setDestination(value);
+                  setPage(1);
+                }}
+                options={[
+                  { value: "all", label: "All destinations" },
+                  ...destinations.map((item) => ({ value: item, label: item })),
+                ]}
+              />
+              <SelectField
+                value={budget}
+                onChange={(value) => {
+                  setBudget(value);
+                  setPage(1);
+                }}
+                options={[
+                  { value: "all", label: "Any budget" },
+                  { value: "under-10000", label: "Under Rs 10k" },
+                  { value: "10000-20000", label: "Rs 10k-Rs 20k" },
+                  { value: "over-20000", label: "Rs 20k+" },
+                ]}
+              />
+              <SelectField
+                value={duration}
+                onChange={(value) => {
+                  setDuration(value);
+                  setPage(1);
+                }}
+                options={[
+                  { value: "all", label: "Any length" },
+                  { value: "short", label: "2-4 days" },
+                  { value: "medium", label: "5-7 days" },
+                  { value: "long", label: "8+ days" },
+                ]}
+              />
+            </div>
+          </div>
+        </div>
+
+        {isLoading ? (
+          <p className="mb-6 text-sm font-semibold text-brand-ink/60">
+            Loading trips...
+          </p>
+        ) : null}
+
+        {trips.length > 0 ? (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+            {trips.map((trip) => (
+              <AdminTripCard
+                key={trip.slug}
+                trip={trip}
+                onDelete={() => deleteTrip(trip.slug)}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-3xl border border-black/5 bg-white p-10 text-center">
+            <h2 className="font-display font-bold text-2xl text-brand-ink">
+              No trips yet.
+            </h2>
+            <p className="text-brand-ink/60 mt-2">
+              Add your first trip or seed the existing frontend data.
+            </p>
+          </div>
+        )}
+
+        {total > tripsPerPage ? (
+          <div className="mt-12 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p className="text-sm text-brand-ink/60">
+              Showing {(page - 1) * tripsPerPage + 1}-
+              {Math.min(page * tripsPerPage, total)} of {total} trips
+            </p>
+            <div className="flex items-center gap-2">
+              <PaginationButton
+                disabled={page === 1}
+                onClick={() => setPage((current) => Math.max(1, current - 1))}
               >
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <h2 className="font-display font-bold text-lg text-brand-ink leading-tight">
-                      {trip.title}
-                    </h2>
-                    <p className="text-sm text-brand-ink/60 mt-1">
-                      {trip.destination}, {trip.region}
-                    </p>
-                  </div>
-                  <span className="text-xs font-bold text-brand-green whitespace-nowrap">
-                    {formatCurrency(trip.price)}
-                  </span>
-                </div>
-              </button>
-              <div className="flex items-center gap-2 mt-4">
-                <Link
-                  href={`/trips/${trip.slug}`}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full bg-brand-paper text-xs font-semibold text-brand-ink/70 hover:text-brand-ink"
-                >
-                  <ExternalIcon /> View
-                </Link>
-                <button
-                  type="button"
-                  onClick={() => deleteTrip(trip.slug)}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full bg-red-50 text-xs font-semibold text-red-600 hover:bg-red-100"
-                >
-                  <TrashIcon /> Delete
-                </button>
-              </div>
-            </div>
-          ))}
-        </aside>
-
-        <form
-          onSubmit={saveTrip}
-          className="xl:col-span-8 bg-white border border-black/5 rounded-3xl p-5 sm:p-7 md:p-8"
-        >
-          <div className="flex items-start justify-between gap-4 mb-8">
-            <div>
-              <p className="text-xs uppercase tracking-[0.2em] font-bold text-brand-green mb-2">
-                {selectedSlug ? "Edit trip" : "Add trip"}
-              </p>
-              <h2 className="font-display font-bold text-3xl text-brand-ink tracking-tight">
-                Public trip details
-              </h2>
-            </div>
-            <button
-              type="submit"
-              disabled={isSaving}
-              className="inline-flex items-center gap-2 px-5 py-3 rounded-full bg-brand-ink text-white font-semibold hover:bg-brand-green transition"
-            >
-              <SaveIcon /> {isSaving ? "Saving..." : "Save"}
-            </button>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-4">
-            <Field label="Title" value={draft.title} onChange={(value) => updateDraft("title", value)} required />
-            <Field label="Slug" value={draft.slug} onChange={(value) => updateDraft("slug", slugify(value))} required />
-            <Field label="Region" value={draft.region} onChange={(value) => updateDraft("region", value)} required />
-            <Field label="Destination" value={draft.destination} onChange={(value) => updateDraft("destination", value)} required />
-            <Field label="Date" value={draft.date} onChange={(value) => updateDraft("date", value)} required />
-            <Field label="Difficulty" value={draft.difficulty} onChange={(value) => updateDraft("difficulty", value)} required />
-            <Field label="Duration days" type="number" value={draft.durationDays} onChange={(value) => updateDraft("durationDays", value)} required />
-            <Field label="Duration nights" type="number" value={draft.durationNights} onChange={(value) => updateDraft("durationNights", value)} required />
-            <Field label="Group size" value={draft.groupSize} onChange={(value) => updateDraft("groupSize", value)} required />
-            <Field label="Price" type="number" value={draft.price} onChange={(value) => updateDraft("price", value)} required />
-            <Field label="Original price" type="number" value={draft.originalPrice} onChange={(value) => updateDraft("originalPrice", value)} required />
-            <Field label="Card image URL" value={draft.image} onChange={(value) => updateDraft("image", value)} required />
-          </div>
-
-          <div className="mt-4 rounded-2xl border border-black/10 bg-brand-paper p-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <p className="text-xs uppercase tracking-widest font-bold text-brand-ink/60">
-                  Card image upload
-                </p>
-                <p className="text-sm text-brand-ink/55 mt-1">
-                  Used on trip cards and the trip detail hero.
-                </p>
-              </div>
-              <label className="inline-flex cursor-pointer items-center justify-center gap-2 px-5 py-3 rounded-full bg-white border border-black/10 text-brand-ink font-semibold hover:border-brand-ink transition">
-                <UploadIcon /> {isUploading ? "Uploading..." : "Upload card image"}
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="sr-only"
-                  disabled={isUploading}
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    event.target.value = "";
-                    if (file) {
-                      void uploadImage(file, "card");
-                    }
-                  }}
-                />
-              </label>
-            </div>
-            {draft.image ? (
-              <div className="mt-4 flex flex-col sm:flex-row gap-4 sm:items-center">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={draft.image}
-                  alt=""
-                  className="h-28 w-40 rounded-2xl object-cover border border-black/10 bg-white"
-                />
-                {draft.imagePublicId ? (
-                  <button
-                    type="button"
-                    onClick={removeCardImage}
-                    className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full bg-red-50 text-sm font-semibold text-red-600 hover:bg-red-100"
+                Previous
+              </PaginationButton>
+              {Array.from({ length: pageCount }, (_, index) => index + 1).map(
+                (pageNumber) => (
+                  <PaginationButton
+                    key={pageNumber}
+                    active={pageNumber === page}
+                    onClick={() => setPage(pageNumber)}
                   >
-                    <TrashIcon /> Delete card image
-                  </button>
-                ) : null}
-              </div>
-            ) : null}
-          </div>
-
-          <div className="mt-4 space-y-4">
-            <TextArea label="Tagline" value={draft.tagline} onChange={(value) => updateDraft("tagline", value)} rows={2} required />
-            <TextArea label="Stay details" value={draft.stay} onChange={(value) => updateDraft("stay", value)} rows={2} required />
-            <TextArea label="Meeting point" value={draft.meetingPoint} onChange={(value) => updateDraft("meetingPoint", value)} rows={2} required />
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-4 mt-4">
-            <TextArea label="Highlights" hint="One highlight per line" value={draft.highlights} onChange={(value) => updateDraft("highlights", value)} rows={6} />
-            <TextArea label="Gallery URLs" hint="One image URL per line" value={draft.gallery} onChange={(value) => updateDraft("gallery", value)} rows={6} />
-            <TextArea label="Included" hint="One inclusion per line" value={draft.included} onChange={(value) => updateDraft("included", value)} rows={6} />
-            <TextArea label="Excluded" hint="One exclusion per line" value={draft.excluded} onChange={(value) => updateDraft("excluded", value)} rows={6} />
-          </div>
-
-          <div className="mt-4">
-            <div className="mb-4 rounded-2xl border border-black/10 bg-brand-paper p-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <p className="text-xs uppercase tracking-widest font-bold text-brand-ink/60">
-                    Gallery image upload
-                  </p>
-                  <p className="text-sm text-brand-ink/55 mt-1">
-                    Upload one or more images for the trip detail gallery.
-                  </p>
-                </div>
-                <label className="inline-flex cursor-pointer items-center justify-center gap-2 px-5 py-3 rounded-full bg-white border border-black/10 text-brand-ink font-semibold hover:border-brand-ink transition">
-                  <UploadIcon /> {isUploading ? "Uploading..." : "Upload gallery"}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    className="sr-only"
-                    disabled={isUploading}
-                    onChange={(event) => {
-                      const files = Array.from(event.target.files ?? []);
-                      event.target.value = "";
-                      files.forEach((file) => void uploadImage(file, "gallery"));
-                    }}
-                  />
-                </label>
-              </div>
-              {toLines(draft.gallery).length > 0 ? (
-                <div className="mt-4 grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {toLines(draft.gallery).map((image, index) => (
-                    <div
-                      key={`${image}-${index}`}
-                      className="rounded-2xl border border-black/10 bg-white p-2"
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={image}
-                        alt=""
-                        className="h-28 w-full rounded-xl object-cover bg-brand-paper"
-                      />
-                      {toLines(draft.galleryPublicIds)[index] ? (
-                        <button
-                          type="button"
-                          onClick={() => removeGalleryImage(index)}
-                          className="mt-2 w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-full bg-red-50 text-xs font-semibold text-red-600 hover:bg-red-100"
-                        >
-                          <TrashIcon /> Delete image
-                        </button>
-                      ) : null}
-                    </div>
-                  ))}
-                </div>
-              ) : null}
+                    {pageNumber}
+                  </PaginationButton>
+                ),
+              )}
+              <PaginationButton
+                disabled={page === pageCount}
+                onClick={() =>
+                  setPage((current) => Math.min(pageCount, current + 1))
+                }
+              >
+                Next
+              </PaginationButton>
             </div>
-            <TextArea
-              label="Itinerary"
-              hint="One day per line: day | title | description"
-              value={draft.itinerary}
-              onChange={(value) => updateDraft("itinerary", value)}
-              rows={8}
-            />
           </div>
-        </form>
+        ) : null}
       </section>
     </div>
   );
 }
 
-function tripToDraft(trip?: Trip): TripDraft {
-  if (!trip) {
-    return emptyDraft;
-  }
-
-  return {
-    slug: trip.slug,
-    title: trip.title,
-    region: trip.region,
-    destination: trip.destination,
-    tagline: trip.tagline,
-    image: trip.image,
-    imagePublicId: trip.imagePublicId ?? "",
-    durationDays: String(trip.durationDays),
-    durationNights: String(trip.durationNights),
-    groupSize: trip.groupSize,
-    date: trip.date,
-    price: String(trip.price),
-    originalPrice: String(trip.originalPrice),
-    difficulty: trip.difficulty,
-    stay: trip.stay,
-    meetingPoint: trip.meetingPoint,
-    highlights: trip.highlights.join("\n"),
-    included: trip.included.join("\n"),
-    excluded: trip.excluded.join("\n"),
-    itinerary: trip.itinerary
-      .map((day) => `${day.day} | ${day.title} | ${day.description}`)
-      .join("\n"),
-    gallery: trip.gallery.join("\n"),
-    galleryPublicIds: trip.galleryPublicIds?.join("\n") ?? "",
-  };
-}
-
-function draftToTrip(draft: TripDraft): Trip {
-  const title = draft.title.trim() || "Untitled Trip";
-  const image = draft.image.trim();
-  const gallery = toLines(draft.gallery);
-  const galleryPublicIds = toLines(draft.galleryPublicIds).slice(0, gallery.length);
-
-  return {
-    slug: draft.slug.trim() || slugify(title),
-    title,
-    region: draft.region.trim(),
-    destination: draft.destination.trim(),
-    tagline: draft.tagline.trim(),
-    image,
-    imagePublicId: draft.imagePublicId || undefined,
-    durationDays: toNumber(draft.durationDays, 1),
-    durationNights: toNumber(draft.durationNights, 0),
-    groupSize: draft.groupSize.trim(),
-    date: draft.date.trim(),
-    price: toNumber(draft.price, 0),
-    originalPrice: toNumber(draft.originalPrice, toNumber(draft.price, 0)),
-    difficulty: draft.difficulty.trim(),
-    stay: draft.stay.trim(),
-    meetingPoint: draft.meetingPoint.trim(),
-    highlights: toLines(draft.highlights),
-    included: toLines(draft.included),
-    excluded: toLines(draft.excluded),
-    itinerary: toItinerary(draft.itinerary),
-    gallery: gallery.length > 0 ? gallery : image ? [image] : [],
-    galleryPublicIds,
-  };
-}
-
-function Field({
-  label,
-  onChange,
-  required,
-  type = "text",
-  value,
+function AdminTripCard({
+  onDelete,
+  trip,
 }: {
-  label: string;
-  onChange: (value: string) => void;
-  required?: boolean;
-  type?: string;
-  value: string;
+  onDelete: () => void;
+  trip: Trip;
 }) {
-  const id = label.toLowerCase().replaceAll(" ", "-");
+  const saved =
+    trip.originalPrice > 0
+      ? Math.round(((trip.originalPrice - trip.price) / trip.originalPrice) * 100)
+      : 0;
 
   return (
-    <div>
-      <label
-        htmlFor={id}
-        className="text-xs uppercase tracking-widest font-bold text-brand-ink/60 mb-2 block"
-      >
-        {label}
-      </label>
-      <input
-        id={id}
-        type={type}
-        value={value}
-        required={required}
-        onChange={(event) => onChange(event.target.value)}
-        className="w-full px-4 py-3 rounded-2xl border border-black/10 bg-brand-paper focus:border-brand-ink focus:bg-white outline-none text-sm"
-      />
-    </div>
-  );
-}
-
-function TextArea({
-  hint,
-  label,
-  onChange,
-  required,
-  rows,
-  value,
-}: {
-  hint?: string;
-  label: string;
-  onChange: (value: string) => void;
-  required?: boolean;
-  rows: number;
-  value: string;
-}) {
-  const id = label.toLowerCase().replaceAll(" ", "-");
-
-  return (
-    <div>
-      <div className="flex items-end justify-between gap-3 mb-2">
-        <label
-          htmlFor={id}
-          className="text-xs uppercase tracking-widest font-bold text-brand-ink/60 block"
-        >
-          {label}
-        </label>
-        {hint ? <span className="text-xs text-brand-ink/45">{hint}</span> : null}
+    <article className="group bg-white rounded-3xl overflow-hidden border border-black/5 transition-all hover:-translate-y-1 hover:shadow-2xl duration-500">
+      <div className="relative aspect-[4/3] overflow-hidden">
+        {trip.image ? (
+          <Image
+            alt={trip.title}
+            fill
+            sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
+            className="object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
+            src={trip.image}
+          />
+        ) : (
+          <div className="absolute inset-0 bg-brand-green-subtle" />
+        )}
+        <div className="absolute inset-0 ink-gradient opacity-70" />
+        <div className="absolute top-4 left-4 flex flex-wrap gap-2">
+          <span className="px-3 py-1 rounded-full bg-white/95 backdrop-blur text-brand-ink text-xs font-bold tracking-wide">
+            {trip.region}
+          </span>
+          {saved > 0 ? (
+            <span className="px-3 py-1 rounded-full bg-brand-green text-white text-xs font-bold">
+              Save {saved}%
+            </span>
+          ) : null}
+        </div>
+        <div className="absolute bottom-4 left-4 right-4">
+          <p className="text-white/80 text-xs uppercase tracking-[0.2em] mb-1">
+            {trip.destination}
+          </p>
+          <h2 className="text-white font-display font-bold text-2xl leading-tight">
+            {trip.title}
+          </h2>
+        </div>
       </div>
-      <textarea
-        id={id}
-        rows={rows}
-        value={value}
-        required={required}
-        onChange={(event) => onChange(event.target.value)}
-        className="w-full px-4 py-3 rounded-2xl border border-black/10 bg-brand-paper focus:border-brand-ink focus:bg-white outline-none text-sm leading-relaxed"
-      />
-    </div>
+
+      <div className="p-5 md:p-6">
+        <p className="text-brand-ink/60 text-sm mb-4 line-clamp-2">
+          {trip.tagline}
+        </p>
+        <div className="flex flex-wrap items-center gap-4 text-xs text-brand-ink/60 mb-5">
+          <span className="inline-flex items-center gap-1.5">
+            <CalendarIcon /> {trip.durationDays}D / {trip.durationNights}N
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <UsersIcon /> {trip.groupSize}
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <MapPinIcon /> {trip.date}
+          </span>
+        </div>
+        <div className="flex items-end justify-between gap-4 pt-4 border-t border-black/5">
+          <div>
+            <p className="text-xs text-brand-ink/50">Starting from</p>
+            <div className="flex items-baseline gap-2">
+              <span className="font-display font-bold text-2xl text-brand-ink">
+                {formatCurrency(trip.price)}
+              </span>
+              <span className="text-sm text-brand-ink/40 line-through">
+                {formatCurrency(trip.originalPrice)}
+              </span>
+            </div>
+          </div>
+        </div>
+        <div className="mt-5 grid grid-cols-3 gap-2">
+          <Link
+            href={`/admin/dashboard/trips/${trip.slug}/edit`}
+            className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-full bg-brand-ink text-white text-xs font-semibold hover:bg-brand-green transition"
+          >
+            <EditIcon /> Edit
+          </Link>
+          <Link
+            href={`/trips/${trip.slug}`}
+            className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-full bg-brand-paper text-xs font-semibold text-brand-ink/70 hover:text-brand-ink"
+          >
+            <ExternalIcon /> View
+          </Link>
+          <button
+            type="button"
+            onClick={onDelete}
+            className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-full bg-red-50 text-xs font-semibold text-red-600 hover:bg-red-100"
+          >
+            <TrashIcon /> Delete
+          </button>
+        </div>
+      </div>
+    </article>
   );
 }
 
@@ -717,42 +428,60 @@ function Stat({ label, value }: { label: string; value: string }) {
   );
 }
 
-function slugify(value: string) {
-  return value
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+function PaginationButton({
+  active,
+  disabled,
+  onClick,
+  children,
+}: {
+  active?: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className={[
+        "min-w-10 rounded-full px-4 py-2 text-sm font-semibold transition",
+        active
+          ? "bg-brand-ink text-white"
+          : "bg-white text-brand-ink border border-black/10 hover:border-brand-ink",
+        disabled ? "cursor-not-allowed opacity-40 hover:border-black/10" : "",
+      ].join(" ")}
+    >
+      {children}
+    </button>
+  );
 }
 
-function toLines(value: string) {
-  return value
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
-}
-
-function toNumber(value: string, fallback: number) {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : fallback;
-}
-
-function toItinerary(value: string): Trip["itinerary"] {
-  const days = value
-    .split("\n")
-    .map((line, index) => {
-      const [day, title, description] = line.split("|").map((part) => part.trim());
-      return {
-        day: toNumber(day, index + 1),
-        title: title || `Day ${index + 1}`,
-        description: description || "Trip experience details.",
-      };
-    })
-    .filter((day) => day.title || day.description);
-
-  return days.length > 0
-    ? days
-    : [{ day: 1, title: "Arrival", description: "Meet the crew and settle in." }];
+function SelectField({
+  value,
+  onChange,
+  options,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  options: Array<{ value: string; label: string }>;
+}) {
+  return (
+    <div className="relative">
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="flex h-12 w-full min-w-[150px] appearance-none items-center justify-between rounded-full border border-black/10 bg-white px-5 py-3 pr-10 text-sm shadow-sm focus:outline-none"
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      <ChevronDownIcon className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" />
+    </div>
+  );
 }
 
 function PlusIcon(props: SVGProps<SVGSVGElement>) {
@@ -763,8 +492,28 @@ function RefreshIcon(props: SVGProps<SVGSVGElement>) {
   return <Icon {...props}><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" /><path d="M3 21v-5h5" /><path d="M3 12a9 9 0 0 1 15.74-6.26L21 8" /><path d="M16 8h5V3" /></Icon>;
 }
 
-function SaveIcon(props: SVGProps<SVGSVGElement>) {
-  return <Icon {...props}><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" /><path d="M17 21v-7H7v7" /><path d="M7 3v5h8" /></Icon>;
+function SearchIcon(props: SVGProps<SVGSVGElement>) {
+  return <Icon {...props}><path d="m21 21-4.34-4.34" /><circle cx="11" cy="11" r="8" /></Icon>;
+}
+
+function ChevronDownIcon(props: SVGProps<SVGSVGElement>) {
+  return <Icon {...props}><path d="m6 9 6 6 6-6" /></Icon>;
+}
+
+function CalendarIcon(props: SVGProps<SVGSVGElement>) {
+  return <Icon {...props}><path d="M8 2v4" /><path d="M16 2v4" /><rect width="18" height="18" x="3" y="4" rx="2" /><path d="M3 10h18" /></Icon>;
+}
+
+function UsersIcon(props: SVGProps<SVGSVGElement>) {
+  return <Icon {...props}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><path d="M16 3.128a4 4 0 0 1 0 7.744" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><circle cx="9" cy="7" r="4" /></Icon>;
+}
+
+function MapPinIcon(props: SVGProps<SVGSVGElement>) {
+  return <Icon {...props}><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0" /><circle cx="12" cy="10" r="3" /></Icon>;
+}
+
+function EditIcon(props: SVGProps<SVGSVGElement>) {
+  return <Icon {...props}><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></Icon>;
 }
 
 function TrashIcon(props: SVGProps<SVGSVGElement>) {
@@ -773,10 +522,6 @@ function TrashIcon(props: SVGProps<SVGSVGElement>) {
 
 function ExternalIcon(props: SVGProps<SVGSVGElement>) {
   return <Icon {...props}><path d="M15 3h6v6" /><path d="M10 14 21 3" /><path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5" /></Icon>;
-}
-
-function UploadIcon(props: SVGProps<SVGSVGElement>) {
-  return <Icon {...props}><path d="M12 3v12" /><path d="m17 8-5-5-5 5" /><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /></Icon>;
 }
 
 function Icon({ children, ...props }: SVGProps<SVGSVGElement>) {

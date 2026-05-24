@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getAdminSession } from "../../lib/adminSession";
-import { getTripsFromDb } from "../../lib/tripsDb";
+import { getTripDestinationsFromDb, queryTripsFromDb } from "../../lib/tripsDb";
 import AdminTripsDashboard from "./AdminTripsDashboard";
 
 export const metadata = {
@@ -15,7 +15,16 @@ export default async function AdminDashboardPage() {
     redirect("/admin/login");
   }
 
-  const trips = await getTripsFromDb();
+  const [initialResult, destinations] = await Promise.all([
+    queryTripsFromDb({ page: 1, pageSize: 6 }),
+    getTripDestinationsFromDb(),
+  ]);
 
-  return <AdminTripsDashboard initialTrips={trips} username={session.username} />;
+  return (
+    <AdminTripsDashboard
+      destinations={destinations}
+      initialResult={initialResult}
+      username={session.username}
+    />
+  );
 }

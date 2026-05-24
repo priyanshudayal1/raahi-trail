@@ -1,20 +1,30 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { getAdminSession } from "../../../lib/adminSession";
-import { getTripsFromDb, saveTripToDb } from "../../../lib/tripsDb";
+import { getTripDestinationsFromDb, queryTripsFromDb, saveTripToDb } from "../../../lib/tripsDb";
 import type { Trip } from "../../../lib/trips";
 
 export const runtime = "nodejs";
 
-export async function GET() {
+export async function GET(request: Request) {
   const session = await getAdminSession();
 
   if (!session) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
-  const trips = await getTripsFromDb();
-  return NextResponse.json({ trips });
+  const { searchParams } = new URL(request.url);
+  const result = await queryTripsFromDb({
+    budget: searchParams.get("budget") ?? "all",
+    destination: searchParams.get("destination") ?? "all",
+    duration: searchParams.get("duration") ?? "all",
+    page: Number(searchParams.get("page") ?? 1),
+    pageSize: Number(searchParams.get("pageSize") ?? 6),
+    search: searchParams.get("search") ?? "",
+  });
+  const destinations = await getTripDestinationsFromDb();
+
+  return NextResponse.json({ ...result, destinations });
 }
 
 export async function POST(request: Request) {

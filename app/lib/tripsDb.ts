@@ -6,6 +6,23 @@ import { getAdminDb } from "./firebaseAdmin";
 import { trips as seedTrips, type Trip } from "./trips";
 
 const tripsCollection = "trips";
+const maxCandidateTrips = 200;
+
+export type TripQueryOptions = {
+  budget?: string;
+  destination?: string;
+  duration?: string;
+  page?: number;
+  pageSize?: number;
+  search?: string;
+};
+
+export type TripQueryResult = {
+  trips: Trip[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
 
 export async function getTripsFromDb(): Promise<Trip[]> {
   const snapshot = await getAdminDb().collection(tripsCollection).get();
@@ -17,6 +34,69 @@ export async function getTripsFromDb(): Promise<Trip[]> {
   return snapshot.docs
     .map((doc) => normalizeTrip(doc.data(), doc.id))
     .sort((a, b) => a.title.localeCompare(b.title));
+}
+
+export async function queryTripsFromDb(
+  options: TripQueryOptions = {},
+): Promise<TripQueryResult> {
+  const page = Math.max(1, options.page ?? 1);
+  const pageSize = Math.min(24, Math.max(1, options.pageSize ?? 6));
+  const search = normalizeSearchTerm(options.search ?? "");
+  const destination = options.destination ?? "all";
+  const needsServerFilter =
+    (options.budget && options.budget !== "all") ||
+    (options.duration && options.duration !== "all");
+  let query: FirebaseFirestore.Query = getAdminDb().collection(tripsCollection);
+
+  if (search) {
+    query = query.where("searchTokens", "array-contains", search);
+  }
+
+  if (destination !== "all") {
+    query = query.where("destination", "==", destination);
+  }
+
+  if (!needsServerFilter) {
+    const countSnapshot = await query.count().get();
+    const pagedQuery = search
+      ? query.offset((page - 1) * pageSize).limit(pageSize)
+      : query.orderBy("title").offset((page - 1) * pageSize).limit(pageSize);
+    const snapshot = await pagedQuery.get();
+
+    return {
+      trips: snapshot.docs.map((doc) => normalizeTrip(doc.data(), doc.id)),
+      total: countSnapshot.data().count,
+      page,
+      pageSize,
+    };
+  }
+
+  const candidateQuery = search ? query : query.orderBy("title");
+  const snapshot = await candidateQuery.limit(maxCandidateTrips).get();
+  const filteredTrips = snapshot.docs
+    .map((doc) => normalizeTrip(doc.data(), doc.id))
+    .filter((trip) => matchesBudget(trip, options.budget ?? "all"))
+    .filter((trip) => matchesDuration(trip, options.duration ?? "all"));
+
+  return {
+    trips: filteredTrips.slice((page - 1) * pageSize, page * pageSize),
+    total: filteredTrips.length,
+    page,
+    pageSize,
+  };
+}
+
+export async function getTripDestinationsFromDb() {
+  const snapshot = await getAdminDb().collection(tripsCollection).select("destination").get();
+  const destinations = snapshot.docs
+    .map((doc) => stringValue(doc.data().destination))
+    .filter(Boolean);
+
+  if (destinations.length === 0) {
+    return Array.from(new Set(seedTrips.map((trip) => trip.destination))).sort();
+  }
+
+  return Array.from(new Set(destinations)).sort();
 }
 
 export async function getTripBySlugFromDb(slug: string): Promise<Trip | null> {
@@ -41,6 +121,7 @@ export async function saveTripToDb(trip: Trip, previousSlug?: string) {
 
   batch.set(nextRef, {
     ...trip,
+    searchTokens: buildSearchTokens(trip),
     updatedAt: FieldValue.serverTimestamp(),
   });
 
@@ -62,6 +143,7 @@ export async function seedTripsToDb() {
   seedTrips.forEach((trip) => {
     batch.set(db.collection(tripsCollection).doc(trip.slug), {
       ...trip,
+      searchTokens: buildSearchTokens(trip),
       seededAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
     });
@@ -154,4 +236,60 @@ function itineraryValue(value: unknown): Trip["itinerary"] {
       description: stringValue(item?.description),
     }))
     .filter((item) => item.title || item.description);
+}
+
+function matchesBudget(trip: Trip, budget: string) {
+  return (
+    budget === "all" ||
+    (budget === "under-10000" && trip.price < 10000) ||
+    (budget === "10000-20000" && trip.price >= 10000 && trip.price <= 20000) ||
+    (budget === "over-20000" && trip.price > 20000)
+  );
+}
+
+function matchesDuration(trip: Trip, duration: string) {
+  return (
+    duration === "all" ||
+    (duration === "short" && trip.durationDays <= 4) ||
+    (duration === "medium" && trip.durationDays >= 5 && trip.durationDays <= 7) ||
+    (duration === "long" && trip.durationDays >= 8)
+  );
+}
+
+function buildSearchTokens(trip: Trip) {
+  const source = [
+    trip.slug,
+    trip.title,
+    trip.region,
+    trip.destination,
+    trip.tagline,
+    trip.difficulty,
+  ]
+    .join(" ")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, " ");
+  const tokens = new Set<string>();
+
+  source
+    .split(/\s+/)
+    .map((token) => token.trim())
+    .filter(Boolean)
+    .forEach((token) => {
+      for (let index = 1; index <= token.length; index += 1) {
+        tokens.add(token.slice(0, index));
+      }
+    });
+
+  return Array.from(tokens).slice(0, 500);
+}
+
+function normalizeSearchTerm(value: string) {
+  return (
+    value
+    .trim()
+    .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, " ")
+      .split(/\s+/)
+      .find(Boolean) ?? ""
+  );
 }
