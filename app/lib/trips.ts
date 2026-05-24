@@ -5,6 +5,7 @@ export type Trip = {
   destination: string;
   tagline: string;
   image: string;
+  imagePublicId?: string;
   durationDays: number;
   durationNights: number;
   groupSize: string;
@@ -23,6 +24,7 @@ export type Trip = {
   stay: string;
   meetingPoint: string;
   gallery: string[];
+  galleryPublicIds?: string[];
 };
 
 const defaultIncluded = [

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { FieldValue } from "firebase-admin/firestore";
+import { deleteCloudinaryImages } from "./cloudinary";
 import { getAdminDb } from "./firebaseAdmin";
 import { trips as seedTrips, type Trip } from "./trips";
 
@@ -32,6 +33,7 @@ export async function saveTripToDb(trip: Trip, previousSlug?: string) {
   const db = getAdminDb();
   const batch = db.batch();
   const nextRef = db.collection(tripsCollection).doc(trip.slug);
+  const previousTrip = await getExistingTrip(previousSlug || trip.slug);
 
   if (previousSlug && previousSlug !== trip.slug) {
     batch.delete(db.collection(tripsCollection).doc(previousSlug));
@@ -43,10 +45,14 @@ export async function saveTripToDb(trip: Trip, previousSlug?: string) {
   });
 
   await batch.commit();
+  await deleteCloudinaryImages(getRemovedPublicIds(previousTrip, trip));
 }
 
 export async function deleteTripFromDb(slug: string) {
+  const trip = await getExistingTrip(slug);
+
   await getAdminDb().collection(tripsCollection).doc(slug).delete();
+  await deleteCloudinaryImages(getTripPublicIds(trip));
 }
 
 export async function seedTripsToDb() {
@@ -75,6 +81,7 @@ function normalizeTrip(data: FirebaseFirestore.DocumentData | undefined, slug: s
     destination: stringValue(trip.destination),
     tagline: stringValue(trip.tagline),
     image: stringValue(trip.image),
+    imagePublicId: stringValue(trip.imagePublicId) || undefined,
     durationDays: numberValue(trip.durationDays),
     durationNights: numberValue(trip.durationNights),
     groupSize: stringValue(trip.groupSize),
@@ -89,7 +96,33 @@ function normalizeTrip(data: FirebaseFirestore.DocumentData | undefined, slug: s
     stay: stringValue(trip.stay),
     meetingPoint: stringValue(trip.meetingPoint),
     gallery: stringArrayValue(trip.gallery),
+    galleryPublicIds: stringArrayValue(trip.galleryPublicIds),
   };
+}
+
+async function getExistingTrip(slug: string) {
+  const snapshot = await getAdminDb().collection(tripsCollection).doc(slug).get();
+
+  return snapshot.exists ? normalizeTrip(snapshot.data(), snapshot.id) : null;
+}
+
+function getTripPublicIds(trip: Trip | null) {
+  if (!trip) {
+    return [];
+  }
+
+  return [trip.imagePublicId, ...(trip.galleryPublicIds ?? [])];
+}
+
+function getRemovedPublicIds(previousTrip: Trip | null, nextTrip: Trip) {
+  if (!previousTrip) {
+    return [];
+  }
+
+  const nextIds = new Set(getTripPublicIds(nextTrip).filter(Boolean));
+  return getTripPublicIds(previousTrip).filter(
+    (publicId) => publicId && !nextIds.has(publicId),
+  );
 }
 
 function stringValue(value: unknown, fallback = "") {

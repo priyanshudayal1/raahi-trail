@@ -12,6 +12,7 @@ type TripDraft = {
   destination: string;
   tagline: string;
   image: string;
+  imagePublicId: string;
   durationDays: string;
   durationNights: string;
   groupSize: string;
@@ -26,6 +27,7 @@ type TripDraft = {
   excluded: string;
   itinerary: string;
   gallery: string;
+  galleryPublicIds: string;
 };
 
 const emptyDraft: TripDraft = {
@@ -35,6 +37,7 @@ const emptyDraft: TripDraft = {
   destination: "",
   tagline: "",
   image: "",
+  imagePublicId: "",
   durationDays: "3",
   durationNights: "2",
   groupSize: "8-14",
@@ -49,6 +52,7 @@ const emptyDraft: TripDraft = {
   excluded: "",
   itinerary: "1 | Arrival and briefing | Meet the crew, settle in, and get the trip briefing.",
   gallery: "",
+  galleryPublicIds: "",
 };
 
 export default function AdminTripsDashboard({
@@ -65,6 +69,7 @@ export default function AdminTripsDashboard({
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   const selectedTrip = useMemo(
     () => trips.find((trip) => trip.slug === selectedSlug),
@@ -136,6 +141,112 @@ export default function AdminTripsDashboard({
 
     setStatus("Trip deleted from Firebase.");
     router.refresh();
+  }
+
+  async function uploadImage(file: File, kind: "card" | "gallery") {
+    setError("");
+    setStatus(`Uploading ${kind === "card" ? "card" : "gallery"} image...`);
+    setIsUploading(true);
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("kind", kind);
+    formData.append("slug", draft.slug || slugify(draft.title) || "draft");
+
+    const response = await fetch("/api/admin/images", {
+      method: "POST",
+      body: formData,
+    });
+    const data = (await response.json()) as {
+      url?: string;
+      publicId?: string;
+      error?: string;
+    };
+
+    setIsUploading(false);
+
+    if (!response.ok || !data.url || !data.publicId) {
+      setStatus("");
+      setError(data.error ?? "Unable to upload image.");
+      return;
+    }
+
+    if (kind === "card") {
+      if (draft.imagePublicId) {
+        await deleteImageByPublicId(draft.imagePublicId);
+      }
+
+      setDraft((current) => ({
+        ...current,
+        image: data.url!,
+        imagePublicId: data.publicId!,
+      }));
+    } else {
+      setDraft((current) => ({
+        ...current,
+        gallery: [...toLines(current.gallery), data.url!].join("\n"),
+        galleryPublicIds: [...toLines(current.galleryPublicIds), data.publicId!].join("\n"),
+      }));
+    }
+
+    setStatus("Image uploaded to Cloudinary.");
+  }
+
+  async function deleteImageByPublicId(publicId: string) {
+    if (!publicId) {
+      return true;
+    }
+
+    const response = await fetch("/api/admin/images", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ publicId }),
+    });
+    const data = (await response.json()) as { error?: string };
+
+    if (!response.ok) {
+      setError(data.error ?? "Unable to delete image.");
+      return false;
+    }
+
+    return true;
+  }
+
+  async function removeCardImage() {
+    setError("");
+    const deleted = await deleteImageByPublicId(draft.imagePublicId);
+
+    if (!deleted) {
+      return;
+    }
+
+    setDraft((current) => ({
+      ...current,
+      image: "",
+      imagePublicId: "",
+    }));
+    setStatus("Card image removed from Cloudinary.");
+  }
+
+  async function removeGalleryImage(index: number) {
+    setError("");
+    const gallery = toLines(draft.gallery);
+    const publicIds = toLines(draft.galleryPublicIds);
+    const deleted = await deleteImageByPublicId(publicIds[index]);
+
+    if (!deleted) {
+      return;
+    }
+
+    gallery.splice(index, 1);
+    publicIds.splice(index, 1);
+
+    setDraft((current) => ({
+      ...current,
+      gallery: gallery.join("\n"),
+      galleryPublicIds: publicIds.join("\n"),
+    }));
+    setStatus("Gallery image removed from Cloudinary.");
   }
 
   async function saveTrip(event: FormEvent<HTMLFormElement>) {
@@ -321,7 +432,55 @@ export default function AdminTripsDashboard({
             <Field label="Group size" value={draft.groupSize} onChange={(value) => updateDraft("groupSize", value)} required />
             <Field label="Price" type="number" value={draft.price} onChange={(value) => updateDraft("price", value)} required />
             <Field label="Original price" type="number" value={draft.originalPrice} onChange={(value) => updateDraft("originalPrice", value)} required />
-            <Field label="Hero image URL" value={draft.image} onChange={(value) => updateDraft("image", value)} required />
+            <Field label="Card image URL" value={draft.image} onChange={(value) => updateDraft("image", value)} required />
+          </div>
+
+          <div className="mt-4 rounded-2xl border border-black/10 bg-brand-paper p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <p className="text-xs uppercase tracking-widest font-bold text-brand-ink/60">
+                  Card image upload
+                </p>
+                <p className="text-sm text-brand-ink/55 mt-1">
+                  Used on trip cards and the trip detail hero.
+                </p>
+              </div>
+              <label className="inline-flex cursor-pointer items-center justify-center gap-2 px-5 py-3 rounded-full bg-white border border-black/10 text-brand-ink font-semibold hover:border-brand-ink transition">
+                <UploadIcon /> {isUploading ? "Uploading..." : "Upload card image"}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="sr-only"
+                  disabled={isUploading}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    event.target.value = "";
+                    if (file) {
+                      void uploadImage(file, "card");
+                    }
+                  }}
+                />
+              </label>
+            </div>
+            {draft.image ? (
+              <div className="mt-4 flex flex-col sm:flex-row gap-4 sm:items-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={draft.image}
+                  alt=""
+                  className="h-28 w-40 rounded-2xl object-cover border border-black/10 bg-white"
+                />
+                {draft.imagePublicId ? (
+                  <button
+                    type="button"
+                    onClick={removeCardImage}
+                    className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full bg-red-50 text-sm font-semibold text-red-600 hover:bg-red-100"
+                  >
+                    <TrashIcon /> Delete card image
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
           </div>
 
           <div className="mt-4 space-y-4">
@@ -338,6 +497,59 @@ export default function AdminTripsDashboard({
           </div>
 
           <div className="mt-4">
+            <div className="mb-4 rounded-2xl border border-black/10 bg-brand-paper p-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <p className="text-xs uppercase tracking-widest font-bold text-brand-ink/60">
+                    Gallery image upload
+                  </p>
+                  <p className="text-sm text-brand-ink/55 mt-1">
+                    Upload one or more images for the trip detail gallery.
+                  </p>
+                </div>
+                <label className="inline-flex cursor-pointer items-center justify-center gap-2 px-5 py-3 rounded-full bg-white border border-black/10 text-brand-ink font-semibold hover:border-brand-ink transition">
+                  <UploadIcon /> {isUploading ? "Uploading..." : "Upload gallery"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="sr-only"
+                    disabled={isUploading}
+                    onChange={(event) => {
+                      const files = Array.from(event.target.files ?? []);
+                      event.target.value = "";
+                      files.forEach((file) => void uploadImage(file, "gallery"));
+                    }}
+                  />
+                </label>
+              </div>
+              {toLines(draft.gallery).length > 0 ? (
+                <div className="mt-4 grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {toLines(draft.gallery).map((image, index) => (
+                    <div
+                      key={`${image}-${index}`}
+                      className="rounded-2xl border border-black/10 bg-white p-2"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={image}
+                        alt=""
+                        className="h-28 w-full rounded-xl object-cover bg-brand-paper"
+                      />
+                      {toLines(draft.galleryPublicIds)[index] ? (
+                        <button
+                          type="button"
+                          onClick={() => removeGalleryImage(index)}
+                          className="mt-2 w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-full bg-red-50 text-xs font-semibold text-red-600 hover:bg-red-100"
+                        >
+                          <TrashIcon /> Delete image
+                        </button>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </div>
             <TextArea
               label="Itinerary"
               hint="One day per line: day | title | description"
@@ -364,6 +576,7 @@ function tripToDraft(trip?: Trip): TripDraft {
     destination: trip.destination,
     tagline: trip.tagline,
     image: trip.image,
+    imagePublicId: trip.imagePublicId ?? "",
     durationDays: String(trip.durationDays),
     durationNights: String(trip.durationNights),
     groupSize: trip.groupSize,
@@ -380,12 +593,15 @@ function tripToDraft(trip?: Trip): TripDraft {
       .map((day) => `${day.day} | ${day.title} | ${day.description}`)
       .join("\n"),
     gallery: trip.gallery.join("\n"),
+    galleryPublicIds: trip.galleryPublicIds?.join("\n") ?? "",
   };
 }
 
 function draftToTrip(draft: TripDraft): Trip {
   const title = draft.title.trim() || "Untitled Trip";
   const image = draft.image.trim();
+  const gallery = toLines(draft.gallery);
+  const galleryPublicIds = toLines(draft.galleryPublicIds).slice(0, gallery.length);
 
   return {
     slug: draft.slug.trim() || slugify(title),
@@ -394,6 +610,7 @@ function draftToTrip(draft: TripDraft): Trip {
     destination: draft.destination.trim(),
     tagline: draft.tagline.trim(),
     image,
+    imagePublicId: draft.imagePublicId || undefined,
     durationDays: toNumber(draft.durationDays, 1),
     durationNights: toNumber(draft.durationNights, 0),
     groupSize: draft.groupSize.trim(),
@@ -407,7 +624,8 @@ function draftToTrip(draft: TripDraft): Trip {
     included: toLines(draft.included),
     excluded: toLines(draft.excluded),
     itinerary: toItinerary(draft.itinerary),
-    gallery: toLines(draft.gallery).length > 0 ? toLines(draft.gallery) : [image],
+    gallery: gallery.length > 0 ? gallery : image ? [image] : [],
+    galleryPublicIds,
   };
 }
 
@@ -555,6 +773,10 @@ function TrashIcon(props: SVGProps<SVGSVGElement>) {
 
 function ExternalIcon(props: SVGProps<SVGSVGElement>) {
   return <Icon {...props}><path d="M15 3h6v6" /><path d="M10 14 21 3" /><path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5" /></Icon>;
+}
+
+function UploadIcon(props: SVGProps<SVGSVGElement>) {
+  return <Icon {...props}><path d="M12 3v12" /><path d="m17 8-5-5-5 5" /><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /></Icon>;
 }
 
 function Icon({ children, ...props }: SVGProps<SVGSVGElement>) {
