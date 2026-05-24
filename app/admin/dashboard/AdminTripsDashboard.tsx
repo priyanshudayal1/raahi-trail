@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useState, type FormEvent, type SVGProps } from "react";
-import { formatCurrency, trips as seedTrips, type Trip } from "../../lib/trips";
+import { formatCurrency, type Trip } from "../../lib/trips";
 
 type TripDraft = {
   slug: string;
@@ -50,10 +51,20 @@ const emptyDraft: TripDraft = {
   gallery: "",
 };
 
-export default function AdminTripsDashboard() {
-  const [trips, setTrips] = useState<Trip[]>(seedTrips);
-  const [selectedSlug, setSelectedSlug] = useState(seedTrips[0]?.slug ?? "");
-  const [draft, setDraft] = useState<TripDraft>(() => tripToDraft(seedTrips[0]));
+export default function AdminTripsDashboard({
+  initialTrips,
+  username,
+}: {
+  initialTrips: Trip[];
+  username: string;
+}) {
+  const router = useRouter();
+  const [trips, setTrips] = useState<Trip[]>(initialTrips);
+  const [selectedSlug, setSelectedSlug] = useState(initialTrips[0]?.slug ?? "");
+  const [draft, setDraft] = useState<TripDraft>(() => tripToDraft(initialTrips[0]));
+  const [status, setStatus] = useState("");
+  const [error, setError] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
   const selectedTrip = useMemo(
     () => trips.find((trip) => trip.slug === selectedSlug),
@@ -80,13 +91,41 @@ export default function AdminTripsDashboard() {
     setDraft(emptyDraft);
   }
 
-  function resetSeedData() {
-    setTrips(seedTrips);
-    setSelectedSlug(seedTrips[0]?.slug ?? "");
-    setDraft(tripToDraft(seedTrips[0]));
+  async function resetSeedData() {
+    setError("");
+    setStatus("Seeding trips...");
+
+    const response = await fetch("/api/admin/trips/seed", { method: "POST" });
+    const data = (await response.json()) as { trips?: Trip[]; error?: string };
+
+    if (!response.ok || !data.trips) {
+      setStatus("");
+      setError(data.error ?? "Unable to seed trips.");
+      return;
+    }
+
+    setTrips(data.trips);
+    setSelectedSlug(data.trips[0]?.slug ?? "");
+    setDraft(tripToDraft(data.trips[0]));
+    setStatus("Seed data saved to Firebase.");
+    router.refresh();
   }
 
-  function deleteTrip(slug: string) {
+  async function deleteTrip(slug: string) {
+    setError("");
+    setStatus("Deleting trip...");
+
+    const response = await fetch(`/api/admin/trips/${encodeURIComponent(slug)}`, {
+      method: "DELETE",
+    });
+    const data = (await response.json()) as { error?: string };
+
+    if (!response.ok) {
+      setStatus("");
+      setError(data.error ?? "Unable to delete trip.");
+      return;
+    }
+
     const nextTrips = trips.filter((trip) => trip.slug !== slug);
     setTrips(nextTrips);
 
@@ -94,20 +133,48 @@ export default function AdminTripsDashboard() {
       setSelectedSlug(nextTrips[0]?.slug ?? "");
       setDraft(nextTrips[0] ? tripToDraft(nextTrips[0]) : emptyDraft);
     }
+
+    setStatus("Trip deleted from Firebase.");
+    router.refresh();
   }
 
-  function saveTrip(event: FormEvent<HTMLFormElement>) {
+  async function saveTrip(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setError("");
+    setStatus("");
+    setIsSaving(true);
 
     const trip = draftToTrip(draft);
+    const response = await fetch("/api/admin/trips", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ trip, previousSlug: selectedSlug || undefined }),
+    });
+    const data = (await response.json()) as { trip?: Trip; error?: string };
+
+    setIsSaving(false);
+
+    if (!response.ok || !data.trip) {
+      setError(data.error ?? "Unable to save trip.");
+      return;
+    }
+
     const exists = trips.some((item) => item.slug === selectedSlug);
     const nextTrips = exists
-      ? trips.map((item) => (item.slug === selectedSlug ? trip : item))
-      : [trip, ...trips];
+      ? trips.map((item) => (item.slug === selectedSlug ? data.trip! : item))
+      : [data.trip, ...trips];
 
     setTrips(nextTrips);
-    setSelectedSlug(trip.slug);
-    setDraft(tripToDraft(trip));
+    setSelectedSlug(data.trip.slug);
+    setDraft(tripToDraft(data.trip));
+    setStatus("Trip saved to Firebase.");
+    router.refresh();
+  }
+
+  async function logout() {
+    await fetch("/api/admin/logout", { method: "POST" });
+    router.push("/admin/login");
+    router.refresh();
   }
 
   return (
@@ -123,9 +190,9 @@ export default function AdminTripsDashboard() {
                 Admin dashboard
               </h1>
               <p className="mt-3 text-brand-ink/60 max-w-2xl">
+                Signed in as <span className="font-semibold">{username}</span>.
                 Manage the same trip details shown on the public trip listing
-                and trip detail pages. This is local state for now, ready for a
-                Firebase save layer later.
+                and trip detail pages.
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
@@ -143,6 +210,13 @@ export default function AdminTripsDashboard() {
               >
                 <RefreshIcon /> Reset
               </button>
+              <button
+                type="button"
+                onClick={logout}
+                className="inline-flex items-center gap-2 px-5 py-3 rounded-full bg-white border border-black/10 text-brand-ink font-semibold hover:border-brand-ink transition"
+              >
+                Logout
+              </button>
             </div>
           </div>
 
@@ -154,6 +228,15 @@ export default function AdminTripsDashboard() {
               value={selectedTrip?.title ?? "New trip draft"}
             />
           </div>
+          {status || error ? (
+            <p
+              className={`mt-5 rounded-2xl px-4 py-3 text-sm font-semibold ${
+                error ? "bg-red-50 text-red-600" : "bg-green-50 text-green-700"
+              }`}
+            >
+              {error || status}
+            </p>
+          ) : null}
         </div>
       </section>
 
@@ -219,9 +302,10 @@ export default function AdminTripsDashboard() {
             </div>
             <button
               type="submit"
+              disabled={isSaving}
               className="inline-flex items-center gap-2 px-5 py-3 rounded-full bg-brand-ink text-white font-semibold hover:bg-brand-green transition"
             >
-              <SaveIcon /> Save
+              <SaveIcon /> {isSaving ? "Saving..." : "Save"}
             </button>
           </div>
 

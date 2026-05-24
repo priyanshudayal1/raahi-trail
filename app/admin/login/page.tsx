@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { SVGProps } from "react";
+import AdminLoginForm from "./AdminLoginForm";
 
 export const metadata = {
   title: "Admin Login | Raahi Trail",
@@ -19,8 +20,8 @@ export default function AdminLoginPage() {
               Welcome back, trip captain.
             </h1>
             <p className="mt-5 text-lg text-brand-ink/65 leading-relaxed">
-              Sign in with your admin username and password. Firebase auth can
-              plug into this form when the backend is ready.
+              Sign in with your admin username and password. Your session is
+              kept in a secure HTTP-only cookie.
             </p>
           </div>
 
@@ -40,32 +41,7 @@ export default function AdminLoginPage() {
                 </div>
               </div>
 
-              <form className="space-y-5">
-                <Field
-                  label="Username"
-                  name="username"
-                  type="text"
-                  testId="admin-login-username"
-                  autoComplete="username"
-                  required
-                />
-                <Field
-                  label="Password"
-                  name="password"
-                  type="password"
-                  testId="admin-login-password"
-                  autoComplete="current-password"
-                  required
-                />
-
-                <button
-                  type="submit"
-                  data-testid="admin-login-submit"
-                  className="w-full inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full bg-brand-yellow text-brand-ink font-semibold hover:bg-brand-ink hover:text-brand-yellow transition active:scale-95"
-                >
-                  Login <ArrowRightIcon />
-                </button>
-              </form>
+              <AdminLoginForm />
 
               <p className="mt-6 text-sm text-center text-brand-ink/60">
                 Need to create an admin?{" "}
@@ -80,42 +56,6 @@ export default function AdminLoginPage() {
           </div>
         </div>
       </section>
-    </div>
-  );
-}
-
-function Field({
-  label,
-  name,
-  type,
-  testId,
-  autoComplete,
-  required,
-}: {
-  label: string;
-  name: string;
-  type: string;
-  testId: string;
-  autoComplete: string;
-  required?: boolean;
-}) {
-  return (
-    <div>
-      <label
-        htmlFor={testId}
-        className="text-xs uppercase tracking-widest font-bold text-brand-ink/60 mb-2 block"
-      >
-        {label}
-      </label>
-      <input
-        id={testId}
-        name={name}
-        data-testid={testId}
-        type={type}
-        autoComplete={autoComplete}
-        required={required}
-        className="w-full px-4 py-3 rounded-2xl border border-black/10 bg-brand-paper focus:border-brand-ink focus:bg-white outline-none text-sm"
-      />
     </div>
   );
 }
@@ -137,27 +77,6 @@ function LockIcon(props: SVGProps<SVGSVGElement>) {
     >
       <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
       <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-    </svg>
-  );
-}
-
-function ArrowRightIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      {...props}
-    >
-      <path d="M5 12h14" />
-      <path d="m12 5 7 7-7 7" />
     </svg>
   );
 }

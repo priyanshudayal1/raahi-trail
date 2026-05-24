@@ -3,12 +3,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
-import {
-  formatCurrency,
-  getTripBySlug,
-  trips,
-  type Trip,
-} from "../../../lib/trips";
+import { getTripBySlugFromDb, getTripsFromDb } from "../../../lib/tripsDb";
+import { formatCurrency, type Trip } from "../../../lib/trips";
 
 type TripPageProps = {
   params: Promise<{
@@ -20,7 +16,9 @@ type IconProps = {
   className?: string;
 };
 
-export function generateStaticParams() {
+export async function generateStaticParams() {
+  const trips = await getTripsFromDb();
+
   return trips.map((trip) => ({
     slug: trip.slug,
   }));
@@ -30,7 +28,7 @@ export async function generateMetadata({
   params,
 }: TripPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const trip = getTripBySlug(slug);
+  const trip = await getTripBySlugFromDb(slug);
 
   if (!trip) {
     return {
@@ -46,7 +44,7 @@ export async function generateMetadata({
 
 export default async function TripDetailPage({ params }: TripPageProps) {
   const { slug } = await params;
-  const trip = getTripBySlug(slug);
+  const trip = await getTripBySlugFromDb(slug);
 
   if (!trip) {
     notFound();

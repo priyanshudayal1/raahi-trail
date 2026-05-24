@@ -3,9 +3,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState, type SVGProps } from "react";
-import { formatCurrency, trips, type Trip } from "../../lib/trips";
+import { formatCurrency, type Trip } from "../../lib/trips";
 
-export default function TripsPageClient() {
+export default function TripsPageClient({ trips }: { trips: Trip[] }) {
   const [query, setQuery] = useState("");
   const [destination, setDestination] = useState("all");
   const [budget, setBudget] = useState("all");
@@ -13,7 +13,7 @@ export default function TripsPageClient() {
 
   const destinations = useMemo(
     () => Array.from(new Set(trips.map((trip) => trip.destination))).sort(),
-    [],
+    [trips],
   );
 
   const filteredTrips = useMemo(() => {
@@ -51,7 +51,7 @@ export default function TripsPageClient() {
         matchesQuery && matchesDestination && matchesBudget && matchesDuration
       );
     });
-  }, [budget, destination, duration, query]);
+  }, [budget, destination, duration, query, trips]);
 
   function resetFilters() {
     setQuery("");

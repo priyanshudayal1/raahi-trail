@@ -8,11 +8,11 @@ import {
   type ReactNode,
   type SVGProps,
 } from "react";
-import { formatCurrency, trips, type Trip } from "../lib/trips";
+import { formatCurrency, type Trip } from "../lib/trips";
 
 const tripsPerPage = 6;
 
-export default function TripsSection() {
+export default function TripsSection({ trips }: { trips: Trip[] }) {
   const [query, setQuery] = useState("");
   const [destination, setDestination] = useState("all");
   const [budget, setBudget] = useState("all");
@@ -21,7 +21,7 @@ export default function TripsSection() {
 
   const destinations = useMemo(
     () => Array.from(new Set(trips.map((trip) => trip.destination))).sort(),
-    [],
+    [trips],
   );
 
   const filteredTrips = useMemo(() => {
@@ -59,7 +59,7 @@ export default function TripsSection() {
         matchesQuery && matchesDestination && matchesBudget && matchesDuration
       );
     });
-  }, [budget, destination, duration, query]);
+  }, [budget, destination, duration, query, trips]);
 
   const pageCount = Math.max(1, Math.ceil(filteredTrips.length / tripsPerPage));
   const visibleTrips = filteredTrips.slice(

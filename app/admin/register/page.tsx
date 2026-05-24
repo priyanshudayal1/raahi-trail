@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { SVGProps } from "react";
+import AdminRegisterForm from "./AdminRegisterForm";
 
 export const metadata = {
   title: "Register Admin | Raahi Trail",
@@ -19,8 +20,8 @@ export default function AdminRegisterPage() {
               Create a private admin account.
             </h1>
             <p className="mt-5 text-lg text-brand-ink/65 leading-relaxed">
-              Use a secret key to keep registration controlled. Later, this can
-              validate against Firebase or a protected server action.
+              Use the registration secret key from your environment to keep
+              admin creation controlled.
             </p>
           </div>
 
@@ -40,40 +41,7 @@ export default function AdminRegisterPage() {
                 </div>
               </div>
 
-              <form className="space-y-5">
-                <Field
-                  label="Username"
-                  name="username"
-                  type="text"
-                  testId="admin-register-username"
-                  autoComplete="username"
-                  required
-                />
-                <Field
-                  label="Password"
-                  name="password"
-                  type="password"
-                  testId="admin-register-password"
-                  autoComplete="new-password"
-                  required
-                />
-                <Field
-                  label="Secret key"
-                  name="secretKey"
-                  type="password"
-                  testId="admin-register-secret-key"
-                  autoComplete="off"
-                  required
-                />
-
-                <button
-                  type="submit"
-                  data-testid="admin-register-submit"
-                  className="w-full inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full bg-brand-yellow text-brand-ink font-semibold hover:bg-brand-ink hover:text-brand-yellow transition active:scale-95"
-                >
-                  Register admin <ArrowRightIcon />
-                </button>
-              </form>
+              <AdminRegisterForm />
 
               <p className="mt-6 text-sm text-center text-brand-ink/60">
                 Already have access?{" "}
@@ -88,42 +56,6 @@ export default function AdminRegisterPage() {
           </div>
         </div>
       </section>
-    </div>
-  );
-}
-
-function Field({
-  label,
-  name,
-  type,
-  testId,
-  autoComplete,
-  required,
-}: {
-  label: string;
-  name: string;
-  type: string;
-  testId: string;
-  autoComplete: string;
-  required?: boolean;
-}) {
-  return (
-    <div>
-      <label
-        htmlFor={testId}
-        className="text-xs uppercase tracking-widest font-bold text-brand-ink/60 mb-2 block"
-      >
-        {label}
-      </label>
-      <input
-        id={testId}
-        name={name}
-        data-testid={testId}
-        type={type}
-        autoComplete={autoComplete}
-        required={required}
-        className="w-full px-4 py-3 rounded-2xl border border-black/10 bg-brand-paper focus:border-brand-ink focus:bg-white outline-none text-sm"
-      />
     </div>
   );
 }
@@ -146,27 +78,6 @@ function KeyIcon(props: SVGProps<SVGSVGElement>) {
       <circle cx="7.5" cy="15.5" r="5.5" />
       <path d="m21 2-9.6 9.6" />
       <path d="m15.5 7.5 3 3L22 7l-3-3" />
-    </svg>
-  );
-}
-
-function ArrowRightIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      {...props}
-    >
-      <path d="M5 12h14" />
-      <path d="m12 5 7 7-7 7" />
     </svg>
   );
 }

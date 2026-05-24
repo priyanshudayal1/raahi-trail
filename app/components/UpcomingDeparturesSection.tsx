@@ -1,64 +1,12 @@
 import type { SVGProps } from "react";
+import { formatCurrency, type Trip } from "../lib/trips";
 
-const upcoming = [
-  {
-    slug: "ladakh-road-trip",
-    day: "10",
-    month: "Jun",
-    title: "Ladakh Road Trip",
-    region: "Ladakh",
-    durationDays: 9,
-    durationNights: 8,
-    difficulty: "Moderate",
-    price: 24999,
-  },
-  {
-    slug: "kashmir-great-lakes",
-    day: "5",
-    month: "Jul",
-    title: "Kashmir Great Lakes Trek",
-    region: "Kashmir",
-    durationDays: 7,
-    durationNights: 6,
-    difficulty: "Moderate-Difficult",
-    price: 16499,
-  },
-  {
-    slug: "ziro-music-valley",
-    day: "24",
-    month: "Sept",
-    title: "Ziro Music Valley",
-    region: "Arunachal Pradesh",
-    durationDays: 7,
-    durationNights: 6,
-    difficulty: "Easy",
-    price: 19999,
-  },
-  {
-    slug: "meghalaya-living-roots",
-    day: "5",
-    month: "Oct",
-    title: "Meghalaya Living Roots",
-    region: "Meghalaya",
-    durationDays: 6,
-    durationNights: 5,
-    difficulty: "Easy-Moderate",
-    price: 15999,
-  },
-  {
-    slug: "goa-offbeat-north",
-    day: "22",
-    month: "Dec",
-    title: "Goa Offbeat North",
-    region: "Goa",
-    durationDays: 5,
-    durationNights: 4,
-    difficulty: "Easy",
-    price: 9999,
-  },
-];
+export default function UpcomingDeparturesSection({ trips }: { trips: Trip[] }) {
+  const upcoming = trips.slice(0, 5).map((trip) => ({
+    ...trip,
+    ...getDateParts(trip.date),
+  }));
 
-export default function UpcomingDeparturesSection() {
   return (
     <section className="py-20 md:py-32 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -127,12 +75,9 @@ export default function UpcomingDeparturesSection() {
   );
 }
 
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0,
-  }).format(value);
+function getDateParts(date: string) {
+  const [day = "--", month = "---"] = date.split(" ");
+  return { day, month };
 }
 
 function MapPinIcon(props: SVGProps<SVGSVGElement>) {

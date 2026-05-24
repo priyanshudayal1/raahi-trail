@@ -5,15 +5,18 @@ import TestimonialsSection from "../components/TestimonialsSection";
 import TripsSection from "../components/TripsSection";
 import UpcomingDeparturesSection from "../components/UpcomingDeparturesSection";
 import WhyRaahiSection from "../components/WhyRaahiSection";
+import { getTripsFromDb } from "../lib/tripsDb";
 
-export default function Home() {
+export default async function Home() {
+  const trips = await getTripsFromDb();
+
   return (
     <>
       <HomeHero />
-      <TripsSection />
+      <TripsSection trips={trips} />
       <WhyRaahiSection />
       <CommunitySection />
-      <UpcomingDeparturesSection />
+      <UpcomingDeparturesSection trips={trips} />
       <TestimonialsSection />
       <HomeImageBand />
     </>
