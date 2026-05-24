@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import TripsSection from "../components/TripsSection";
+import TripsPageClient from "./TripsPageClient";
 
 export const metadata: Metadata = {
   title: "Trips - Raahi Trail",
@@ -8,9 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function TripsPage() {
-  return (
-    <div className="pt-16 md:pt-20">
-      <TripsSection />
-    </div>
-  );
+  return <TripsPageClient />;
 }

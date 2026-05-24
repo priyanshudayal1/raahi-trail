@@ -62,6 +62,14 @@ h6,
   border-bottom: 1px solid rgb(10 10 10 / 0.06);
 }
 
+.glass-scrolled {
+  backdrop-filter: blur(28px) saturate(1.35);
+  -webkit-backdrop-filter: blur(28px) saturate(1.35);
+  background: rgb(255 255 255 / 0.86);
+  border-bottom: 1px solid rgb(10 10 10 / 0.08);
+  box-shadow: 0 10px 30px rgb(10 10 10 / 0.06);
+}
+
 .glass-dark {
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);

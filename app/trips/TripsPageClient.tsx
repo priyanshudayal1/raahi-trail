@@ -2,22 +2,14 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import {
-  useMemo,
-  useState,
-  type ReactNode,
-  type SVGProps,
-} from "react";
+import { useMemo, useState, type SVGProps } from "react";
 import { formatCurrency, trips, type Trip } from "../lib/trips";
 
-const tripsPerPage = 6;
-
-export default function TripsSection() {
+export default function TripsPageClient() {
   const [query, setQuery] = useState("");
   const [destination, setDestination] = useState("all");
   const [budget, setBudget] = useState("all");
   const [duration, setDuration] = useState("all");
-  const [page, setPage] = useState(1);
 
   const destinations = useMemo(
     () => Array.from(new Set(trips.map((trip) => trip.destination))).sort(),
@@ -61,181 +53,117 @@ export default function TripsSection() {
     });
   }, [budget, destination, duration, query]);
 
-  const pageCount = Math.max(1, Math.ceil(filteredTrips.length / tripsPerPage));
-  const visibleTrips = filteredTrips.slice(
-    (page - 1) * tripsPerPage,
-    page * tripsPerPage,
-  );
-
   function resetFilters() {
     setQuery("");
     setDestination("all");
     setBudget("all");
     setDuration("all");
-    setPage(1);
-  }
-
-  function updateQuery(value: string) {
-    setQuery(value);
-    setPage(1);
-  }
-
-  function updateDestination(value: string) {
-    setDestination(value);
-    setPage(1);
-  }
-
-  function updateBudget(value: string) {
-    setBudget(value);
-    setPage(1);
-  }
-
-  function updateDuration(value: string) {
-    setDuration(value);
-    setPage(1);
   }
 
   return (
-    <section id="trips" className="bg-brand-paper">
-      <section className="py-20 md:py-32">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
-            <div>
-              <p className="text-xs uppercase tracking-[0.2em] font-bold text-brand-green mb-3">
-                ✶ Featured escapes
-              </p>
-              <h2 className="font-display font-bold text-4xl md:text-5xl lg:text-6xl text-brand-ink tracking-tight leading-none">
-                The ones <em className="not-italic text-brand-green">everyone</em>
-                <br /> is packing for.
-              </h2>
+    <div data-testid="trips-page" className="pt-20 md:pt-24 bg-brand-paper min-h-screen">
+      <section className="bg-white border-b border-black/5">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 md:py-20">
+          <p className="text-xs uppercase tracking-[0.2em] font-bold text-brand-green mb-3">
+            &#10038; All trips
+          </p>
+          <h1 className="font-display font-bold text-5xl md:text-6xl lg:text-7xl text-brand-ink tracking-tight leading-[0.95]">
+            Pick your <em className="not-italic text-brand-green">next escape.</em>
+          </h1>
+          <p className="mt-5 text-brand-ink/60 text-lg max-w-2xl">
+            {trips.length}+ curated journeys across India. Filter karo, pick
+            karo, niklo.
+          </p>
+        </div>
+      </section>
+
+      <section className="sticky top-16 md:top-20 z-30 bg-white/85 backdrop-blur-xl border-b border-black/5">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex flex-col lg:flex-row gap-3">
+            <div className="relative flex-1">
+              <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-ink/40" />
+              <input
+                data-testid="trip-search-input"
+                placeholder="Search by destination, vibe..."
+                className="w-full pl-11 pr-4 py-3 rounded-full border border-black/10 bg-white focus:border-brand-ink focus:ring-0 outline-none text-sm"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+              />
             </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 lg:w-auto">
+              <SelectField
+                testId="filter-destination"
+                value={destination}
+                onChange={setDestination}
+                options={[
+                  { value: "all", label: "All destinations" },
+                  ...destinations.map((item) => ({
+                    value: item,
+                    label: item,
+                  })),
+                ]}
+              />
+              <SelectField
+                testId="filter-budget"
+                value={budget}
+                onChange={setBudget}
+                options={[
+                  { value: "all", label: "Any budget" },
+                  { value: "under-10000", label: "Under Rs 10k" },
+                  { value: "10000-20000", label: "Rs 10k-Rs 20k" },
+                  { value: "over-20000", label: "Rs 20k+" },
+                ]}
+              />
+              <SelectField
+                testId="filter-duration"
+                value={duration}
+                onChange={setDuration}
+                options={[
+                  { value: "all", label: "Any length" },
+                  { value: "short", label: "2-4 days" },
+                  { value: "medium", label: "5-7 days" },
+                  { value: "long", label: "8+ days" },
+                ]}
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
+        <p className="text-sm text-brand-ink/60 mb-6">
+          Showing{" "}
+          <span className="font-semibold text-brand-ink">
+            {filteredTrips.length}
+          </span>{" "}
+          trip{filteredTrips.length === 1 ? "" : "s"}
+        </p>
+
+        {filteredTrips.length > 0 ? (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+            {filteredTrips.map((trip) => (
+              <TripCard key={trip.slug} trip={trip} />
+            ))}
+          </div>
+        ) : (
+          <div className="bg-white rounded-3xl border border-black/5 p-10 text-center">
+            <h2 className="font-display font-bold text-2xl text-brand-ink">
+              No trips match that search.
+            </h2>
+            <p className="text-brand-ink/60 mt-2">
+              Try a different destination, budget, or trip length.
+            </p>
             <button
-              data-testid="featured-see-all"
-              className="inline-flex items-center gap-2 text-brand-ink font-semibold hover:text-brand-green"
+              className="mt-6 px-6 py-3 rounded-full bg-brand-yellow text-brand-ink font-semibold hover:bg-brand-ink hover:text-brand-yellow transition"
               type="button"
               onClick={resetFilters}
             >
-              See all trips <ArrowRightIcon width={16} height={16} />
+              Reset filters
             </button>
           </div>
-
-          <div className="mb-12 rounded-3xl border border-black/5 bg-white/75 p-3 shadow-sm backdrop-blur">
-            <div className="flex flex-col lg:flex-row gap-3">
-              <div className="relative flex-1">
-                <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-ink/40" />
-                <input
-                  data-testid="trip-search-input"
-                  placeholder="Search by destination, vibe..."
-                  className="w-full pl-11 pr-4 py-3 rounded-full border border-black/10 bg-white focus:border-brand-ink focus:ring-0 outline-none text-sm"
-                  value={query}
-                  onChange={(event) => updateQuery(event.target.value)}
-                />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 lg:w-auto">
-                <SelectField
-                  testId="filter-destination"
-                  value={destination}
-                  onChange={updateDestination}
-                  options={[
-                    { value: "all", label: "All destinations" },
-                    ...destinations.map((item) => ({
-                      value: item,
-                      label: item,
-                    })),
-                  ]}
-                />
-                <SelectField
-                  testId="filter-budget"
-                  value={budget}
-                  onChange={updateBudget}
-                  options={[
-                    { value: "all", label: "Any budget" },
-                    { value: "under-10000", label: "Under Rs 10k" },
-                    { value: "10000-20000", label: "Rs 10k-Rs 20k" },
-                    { value: "over-20000", label: "Rs 20k+" },
-                  ]}
-                />
-                <SelectField
-                  testId="filter-duration"
-                  value={duration}
-                  onChange={updateDuration}
-                  options={[
-                    { value: "all", label: "Any length" },
-                    { value: "short", label: "2-4 days" },
-                    { value: "medium", label: "5-7 days" },
-                    { value: "long", label: "8+ days" },
-                  ]}
-                />
-              </div>
-            </div>
-          </div>
-
-          {visibleTrips.length > 0 ? (
-            <div
-              id="trips-grid"
-              className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8"
-            >
-              {visibleTrips.map((trip) => (
-                <TripCard key={trip.slug} trip={trip} />
-              ))}
-            </div>
-          ) : (
-            <div className="bg-white rounded-3xl border border-black/5 p-10 text-center">
-              <h3 className="font-display font-bold text-2xl text-brand-ink">
-                No trips match that search.
-              </h3>
-              <p className="text-brand-ink/60 mt-2">
-                Try a different destination, budget, or trip length.
-              </p>
-              <button
-                className="mt-6 px-6 py-3 rounded-full bg-brand-yellow text-brand-ink font-semibold hover:bg-brand-ink hover:text-brand-yellow transition"
-                type="button"
-                onClick={resetFilters}
-              >
-                Reset filters
-              </button>
-            </div>
-          )}
-
-          {filteredTrips.length > tripsPerPage && (
-            <div className="mt-12 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <p className="text-sm text-brand-ink/60">
-                Showing {(page - 1) * tripsPerPage + 1}-
-                {Math.min(page * tripsPerPage, filteredTrips.length)} of{" "}
-                {filteredTrips.length} trips
-              </p>
-              <div className="flex items-center gap-2">
-                <PaginationButton
-                  disabled={page === 1}
-                  onClick={() => setPage((current) => Math.max(1, current - 1))}
-                >
-                  Previous
-                </PaginationButton>
-                {Array.from({ length: pageCount }, (_, index) => index + 1).map(
-                  (pageNumber) => (
-                    <PaginationButton
-                      key={pageNumber}
-                      active={pageNumber === page}
-                      onClick={() => setPage(pageNumber)}
-                    >
-                      {pageNumber}
-                    </PaginationButton>
-                  ),
-                )}
-                <PaginationButton
-                  disabled={page === pageCount}
-                  onClick={() =>
-                    setPage((current) => Math.min(pageCount, current + 1))
-                  }
-                >
-                  Next
-                </PaginationButton>
-              </div>
-            </div>
-          )}
-        </div>
+        )}
       </section>
-    </section>
+    </div>
   );
 }
 
@@ -304,7 +232,7 @@ function TripCard({ trip }: { trip: Trip }) {
             </div>
           </div>
           <span className="px-4 py-2 rounded-full bg-brand-ink text-white text-xs font-bold group-hover:bg-brand-green transition-colors">
-            View
+            View &rarr;
           </span>
         </div>
       </div>
@@ -339,56 +267,6 @@ function SelectField({
       </select>
       <ChevronDownIcon className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" />
     </div>
-  );
-}
-
-function PaginationButton({
-  active,
-  disabled,
-  onClick,
-  children,
-}: {
-  active?: boolean;
-  disabled?: boolean;
-  onClick: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onClick}
-      className={[
-        "min-w-10 rounded-full px-4 py-2 text-sm font-semibold transition",
-        active
-          ? "bg-brand-ink text-white"
-          : "bg-white text-brand-ink border border-black/10 hover:border-brand-ink",
-        disabled ? "cursor-not-allowed opacity-40 hover:border-black/10" : "",
-      ].join(" ")}
-    >
-      {children}
-    </button>
-  );
-}
-
-function ArrowRightIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      {...props}
-    >
-      <path d="M5 12h14" />
-      <path d="m12 5 7 7-7 7" />
-    </svg>
   );
 }
 
