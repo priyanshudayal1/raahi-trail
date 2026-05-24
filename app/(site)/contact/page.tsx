@@ -57,7 +57,7 @@ export default function ContactPage() {
             target="_blank"
             rel="noreferrer"
             data-testid="contact-wa-card"
-            className="lg:col-span-5 group bg-[#25D366] text-white rounded-3xl p-8 md:p-10 flex flex-col justify-between hover:scale-[1.01] transition-transform min-h-[320px]"
+            className="lg:col-span-5 group bg-[#25D366] text-white rounded-3xl p-8 md:p-10 flex flex-col justify-between hover:scale-[1.01] transition-transform min-h-80"
           >
             <div>
               <div className="inline-flex items-center gap-2 bg-white/15 backdrop-blur px-3 py-1 rounded-full text-xs uppercase tracking-widest font-bold">

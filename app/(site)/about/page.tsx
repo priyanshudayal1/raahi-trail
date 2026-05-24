@@ -90,7 +90,7 @@ export default function AboutPage() {
 
       <section className="py-20 md:py-32 bg-white">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 grid md:grid-cols-2 gap-12 items-center">
-          <div className="relative aspect-[4/5] rounded-3xl overflow-hidden">
+          <div className="relative aspect-4/5 rounded-3xl overflow-hidden">
             <Image
               alt="Founder"
               fill
@@ -161,7 +161,7 @@ export default function AboutPage() {
 
       <section className="py-24 md:py-32 bg-brand-paper">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="font-display font-bold text-4xl md:text-6xl text-brand-ink tracking-tight leading-[1]">
+          <h2 className="font-display font-bold text-4xl md:text-6xl text-brand-ink tracking-tight leading-none">
             Ready to meet your{" "}
             <span className="text-brand-green">next favorite people?</span>
           </h2>

@@ -39,7 +39,7 @@ const Header: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 md:h-20">
           <Link data-testid="logo-link" className="flex items-center gap-2 group" href="/">
-            <span className="relative block h-10 w-[100px] overflow-hidden rounded-lg shadow-sm md:h-11 md:w-[110px]">
+            <span className="relative block h-10 w-25 overflow-hidden rounded-lg shadow-sm md:h-11 md:w-27.5">
               <Image
                 alt="Raahi Trail"
                 className="object-cover"

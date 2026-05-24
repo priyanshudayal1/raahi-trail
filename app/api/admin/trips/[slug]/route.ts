@@ -1,7 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { getAdminSession } from "../../../../lib/adminSession";
-import { deleteTripFromDb } from "../../../../lib/tripsDb";
+import { deleteTripFromDb, getTripByIdFromDb } from "../../../../lib/tripsDb";
 
 export const runtime = "nodejs";
 
@@ -15,16 +15,20 @@ export async function DELETE(
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
-  const { slug } = await context.params;
+  const { slug: id } = await context.params;
 
-  if (!slug) {
-    return NextResponse.json({ error: "Trip slug is required." }, { status: 400 });
+  if (!id) {
+    return NextResponse.json({ error: "Trip id is required." }, { status: 400 });
   }
 
-  await deleteTripFromDb(slug);
+  const trip = await getTripByIdFromDb(id);
+
+  await deleteTripFromDb(id);
   revalidatePath("/");
   revalidatePath("/trips");
-  revalidatePath(`/trips/${slug}`);
+  if (trip?.slug) {
+    revalidatePath(`/trips/${trip.slug}`);
+  }
 
   return NextResponse.json({ ok: true });
 }

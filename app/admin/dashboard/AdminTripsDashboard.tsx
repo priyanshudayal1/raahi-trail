@@ -106,11 +106,11 @@ export default function AdminTripsDashboard({
     setStatus("Seed data saved to Firebase.");
   }
 
-  async function deleteTrip(slug: string) {
+  async function deleteTrip(id: string) {
     setError("");
     setStatus("Deleting trip...");
 
-    const response = await fetch(`/api/admin/trips/${encodeURIComponent(slug)}`, {
+    const response = await fetch(`/api/admin/trips/${encodeURIComponent(id)}`, {
       method: "DELETE",
     });
     const data = (await response.json()) as { error?: string };
@@ -121,7 +121,7 @@ export default function AdminTripsDashboard({
       return;
     }
 
-    setTrips((current) => current.filter((trip) => trip.slug !== slug));
+    setTrips((current) => current.filter((trip) => trip.id !== id));
     setTotal((current) => Math.max(0, current - 1));
     setStatus("Trip deleted from Firebase.");
   }
@@ -257,9 +257,9 @@ export default function AdminTripsDashboard({
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
             {trips.map((trip) => (
               <AdminTripCard
-                key={trip.slug}
+                key={trip.id ?? trip.slug}
                 trip={trip}
-                onDelete={() => deleteTrip(trip.slug)}
+                onDelete={() => deleteTrip(trip.id ?? trip.slug)}
               />
             ))}
           </div>
@@ -328,7 +328,7 @@ function AdminTripCard({
 
   return (
     <article className="group bg-white rounded-3xl overflow-hidden border border-black/5 transition-all hover:-translate-y-1 hover:shadow-2xl duration-500">
-      <div className="relative aspect-[4/3] overflow-hidden">
+      <div className="relative aspect-4/3 overflow-hidden">
         {trip.image ? (
           <Image
             alt={trip.title}
@@ -391,7 +391,7 @@ function AdminTripCard({
         </div>
         <div className="mt-5 grid grid-cols-3 gap-2">
           <Link
-            href={`/admin/dashboard/trips/${trip.slug}/edit`}
+            href={`/admin/dashboard/trips/${trip.id}/edit`}
             className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-full bg-brand-ink text-white text-xs font-semibold hover:bg-brand-green transition"
           >
             <EditIcon /> Edit
@@ -471,7 +471,7 @@ function SelectField({
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="flex h-12 w-full min-w-[150px] appearance-none items-center justify-between rounded-full border border-black/10 bg-white px-5 py-3 pr-10 text-sm shadow-sm focus:outline-none"
+        className="flex h-12 w-full min-w-37.5 appearance-none items-center justify-between rounded-full border border-black/10 bg-white px-5 py-3 pr-10 text-sm shadow-sm focus:outline-none"
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>

@@ -6,6 +6,7 @@ import { useState, type FormEvent, type SVGProps } from "react";
 import { type Trip } from "../../lib/trips";
 
 type TripDraft = {
+  id: string;
   slug: string;
   title: string;
   region: string;
@@ -31,6 +32,7 @@ type TripDraft = {
 };
 
 const emptyDraft: TripDraft = {
+  id: "",
   slug: "",
   title: "",
   region: "",
@@ -57,10 +59,10 @@ const emptyDraft: TripDraft = {
 
 export default function AdminTripForm({
   initialTrip,
-  previousSlug,
+  previousId,
 }: {
   initialTrip?: Trip;
-  previousSlug?: string;
+  previousId?: string;
 }) {
   const router = useRouter();
   const [draft, setDraft] = useState<TripDraft>(() => tripToDraft(initialTrip));
@@ -199,7 +201,7 @@ export default function AdminTripForm({
     const response = await fetch("/api/admin/trips", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ trip, previousSlug }),
+      body: JSON.stringify({ trip, previousId }),
     });
     const data = (await response.json()) as { trip?: Trip; error?: string };
 
@@ -212,7 +214,7 @@ export default function AdminTripForm({
 
     setDraft(tripToDraft(data.trip));
     setStatus("Trip saved to Firebase.");
-    router.push(`/admin/dashboard/trips/${data.trip.slug}/edit`);
+    router.push(`/admin/dashboard/trips/${data.trip.id}/edit`);
     router.refresh();
   }
 
@@ -229,7 +231,7 @@ export default function AdminTripForm({
           <div className="mt-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
             <div>
               <p className="text-xs uppercase tracking-[0.2em] font-bold text-brand-green mb-3">
-                {previousSlug ? "Edit trip" : "Add trip"}
+                {previousId ? "Edit trip" : "Add trip"}
               </p>
               <h1 className="font-display font-bold text-4xl md:text-5xl text-brand-ink tracking-tight">
                 Public trip details
@@ -461,6 +463,7 @@ function tripToDraft(trip?: Trip): TripDraft {
   }
 
   return {
+    id: trip.id ?? "",
     slug: trip.slug,
     title: trip.title,
     region: trip.region,
@@ -495,6 +498,7 @@ function draftToTrip(draft: TripDraft): Trip {
   const galleryPublicIds = toLines(draft.galleryPublicIds).slice(0, gallery.length);
 
   return {
+    id: draft.id || undefined,
     slug: draft.slug.trim() || slugify(title),
     title,
     region: draft.region.trim(),

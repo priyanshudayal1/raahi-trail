@@ -1,5 +1,6 @@
 import "server-only";
 
+import { createHash, randomUUID } from "crypto";
 import { FieldValue } from "firebase-admin/firestore";
 import { deleteCloudinaryImages } from "./cloudinary";
 import { getAdminDb } from "./firebaseAdmin";
@@ -28,7 +29,7 @@ export async function getTripsFromDb(): Promise<Trip[]> {
   const snapshot = await getAdminDb().collection(tripsCollection).get();
 
   if (snapshot.empty) {
-    return seedTrips;
+    return getSeedTripsWithIds();
   }
 
   return snapshot.docs
@@ -93,64 +94,91 @@ export async function getTripDestinationsFromDb() {
     .filter(Boolean);
 
   if (destinations.length === 0) {
-    return Array.from(new Set(seedTrips.map((trip) => trip.destination))).sort();
+    return Array.from(new Set(getSeedTripsWithIds().map((trip) => trip.destination))).sort();
   }
 
   return Array.from(new Set(destinations)).sort();
 }
 
 export async function getTripBySlugFromDb(slug: string): Promise<Trip | null> {
-  const snapshot = await getAdminDb().collection(tripsCollection).doc(slug).get();
+  const snapshot = await getAdminDb()
+    .collection(tripsCollection)
+    .where("slug", "==", slug)
+    .limit(1)
+    .get();
 
-  if (!snapshot.exists) {
-    return seedTrips.find((trip) => trip.slug === slug) ?? null;
+  if (snapshot.empty) {
+    return getSeedTripsWithIds().find((trip) => trip.slug === slug) ?? null;
   }
 
-  return normalizeTrip(snapshot.data(), snapshot.id);
+  return normalizeTrip(snapshot.docs[0].data(), snapshot.docs[0].id);
 }
 
-export async function saveTripToDb(trip: Trip, previousSlug?: string) {
+export async function getTripByIdFromDb(id: string): Promise<Trip | null> {
+  const snapshot = await getAdminDb().collection(tripsCollection).doc(id).get();
+
+  return snapshot.exists ? normalizeTrip(snapshot.data(), snapshot.id) : null;
+}
+
+export async function saveTripToDb(trip: Trip, previousId?: string) {
   const db = getAdminDb();
   const batch = db.batch();
-  const nextRef = db.collection(tripsCollection).doc(trip.slug);
-  const previousTrip = await getExistingTrip(previousSlug || trip.slug);
+  const id = trip.id || previousId || randomUUID();
+  const nextTrip = { ...trip, id };
+  const nextRef = db.collection(tripsCollection).doc(id);
+  const previousTrip = previousId ? await getExistingTrip(previousId) : null;
 
-  if (previousSlug && previousSlug !== trip.slug) {
-    batch.delete(db.collection(tripsCollection).doc(previousSlug));
+  if (previousId && previousId !== id) {
+    batch.delete(db.collection(tripsCollection).doc(previousId));
   }
 
   batch.set(nextRef, {
-    ...trip,
-    searchTokens: buildSearchTokens(trip),
+    ...nextTrip,
+    searchTokens: buildSearchTokens(nextTrip),
     updatedAt: FieldValue.serverTimestamp(),
   });
 
   await batch.commit();
-  await deleteCloudinaryImages(getRemovedPublicIds(previousTrip, trip));
+  await deleteCloudinaryImages(getRemovedPublicIds(previousTrip, nextTrip));
+
+  return nextTrip;
 }
 
-export async function deleteTripFromDb(slug: string) {
-  const trip = await getExistingTrip(slug);
+export async function deleteTripFromDb(id: string) {
+  const trip = await getExistingTrip(id);
 
-  await getAdminDb().collection(tripsCollection).doc(slug).delete();
+  await getAdminDb().collection(tripsCollection).doc(id).delete();
   await deleteCloudinaryImages(getTripPublicIds(trip));
 }
 
 export async function seedTripsToDb() {
   const db = getAdminDb();
+  const existingTrips = await db.collection(tripsCollection).get();
+  const existingPublicIds = existingTrips.docs.flatMap((doc) =>
+    getTripPublicIds(normalizeTrip(doc.data(), doc.id)),
+  );
+  const cleanupBatch = db.batch();
+
+  existingTrips.docs.forEach((doc) => {
+    cleanupBatch.delete(doc.ref);
+  });
+
+  await cleanupBatch.commit();
+  await deleteCloudinaryImages(existingPublicIds);
+
   const batch = db.batch();
 
-  seedTrips.forEach((trip) => {
-    batch.set(db.collection(tripsCollection).doc(trip.slug), {
-      ...trip,
-      searchTokens: buildSearchTokens(trip),
+  getSeedTripsWithIds().forEach((tripWithId) => {
+    batch.set(db.collection(tripsCollection).doc(tripWithId.id), {
+      ...tripWithId,
+      searchTokens: buildSearchTokens(tripWithId),
       seededAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
     });
   });
 
   await batch.commit();
-  return seedTrips;
+  return getSeedTripsWithIds();
 }
 
 function normalizeTrip(data: FirebaseFirestore.DocumentData | undefined, slug: string): Trip {
@@ -158,6 +186,7 @@ function normalizeTrip(data: FirebaseFirestore.DocumentData | undefined, slug: s
 
   return {
     slug: stringValue(trip.slug, slug),
+    id: stringValue(trip.id, slug),
     title: stringValue(trip.title),
     region: stringValue(trip.region),
     destination: stringValue(trip.destination),
@@ -186,6 +215,25 @@ async function getExistingTrip(slug: string) {
   const snapshot = await getAdminDb().collection(tripsCollection).doc(slug).get();
 
   return snapshot.exists ? normalizeTrip(snapshot.data(), snapshot.id) : null;
+}
+
+function deterministicUuid(value: string) {
+  const hash = createHash("sha256").update(value).digest("hex");
+
+  return [
+    hash.slice(0, 8),
+    hash.slice(8, 12),
+    `5${hash.slice(13, 16)}`,
+    `${((parseInt(hash.slice(16, 18), 16) & 0x3f) | 0x80).toString(16)}${hash.slice(18, 20)}`,
+    hash.slice(20, 32),
+  ].join("-");
+}
+
+function getSeedTripsWithIds() {
+  return seedTrips.map((trip) => ({
+    ...trip,
+    id: deterministicUuid(trip.slug),
+  }));
 }
 
 function getTripPublicIds(trip: Trip | null) {

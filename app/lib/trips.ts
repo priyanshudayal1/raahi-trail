@@ -1,4 +1,5 @@
 export type Trip = {
+  id?: string;
   slug: string;
   title: string;
   region: string;

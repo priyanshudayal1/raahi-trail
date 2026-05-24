@@ -1,7 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { getAdminSession } from "../../../lib/adminSession";
-import { getTripDestinationsFromDb, queryTripsFromDb, saveTripToDb } from "../../../lib/tripsDb";
+import { getTripByIdFromDb, getTripDestinationsFromDb, queryTripsFromDb, saveTripToDb } from "../../../lib/tripsDb";
 import type { Trip } from "../../../lib/trips";
 
 export const runtime = "nodejs";
@@ -36,17 +36,20 @@ export async function POST(request: Request) {
 
   const body = (await request.json()) as {
     trip?: Trip;
-    previousSlug?: string;
+    previousId?: string;
   };
 
   if (!body.trip?.slug) {
     return NextResponse.json({ error: "Trip slug is required." }, { status: 400 });
   }
 
-  await saveTripToDb(body.trip, body.previousSlug);
-  revalidateTripPaths(body.trip.slug, body.previousSlug);
+  const previousTrip = body.previousId
+    ? await getTripByIdFromDb(body.previousId)
+    : null;
+  const trip = await saveTripToDb(body.trip, body.previousId);
+  revalidateTripPaths(trip.slug, previousTrip?.slug);
 
-  return NextResponse.json({ trip: body.trip });
+  return NextResponse.json({ trip });
 }
 
 function revalidateTripPaths(slug: string, previousSlug?: string) {

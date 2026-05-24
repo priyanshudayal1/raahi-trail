@@ -256,7 +256,7 @@ function TripCard({ trip }: { trip: Trip }) {
       className="group block bg-white rounded-3xl overflow-hidden border border-black/5 hover:border-black/10 transition-all hover:-translate-y-1 hover:shadow-2xl duration-500"
       href={`/trips/${trip.slug}`}
     >
-      <div className="relative aspect-[4/3] overflow-hidden">
+      <div className="relative aspect-4/3 overflow-hidden">
         <Image
           alt={trip.title}
           fill
@@ -335,7 +335,7 @@ function SelectField({
         data-testid={testId}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="flex w-full appearance-none items-center justify-between whitespace-nowrap border shadow-sm focus:outline-none rounded-full px-5 py-3 h-12 border-black/10 bg-white text-sm min-w-[140px] pr-10"
+        className="flex w-full appearance-none items-center justify-between whitespace-nowrap border shadow-sm focus:outline-none rounded-full px-5 py-3 h-12 border-black/10 bg-white text-sm min-w-35 pr-10"
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>

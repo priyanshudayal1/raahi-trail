@@ -69,7 +69,7 @@ export default async function TripDetailPage({ params }: TripPageProps) {
           sizes="100vw"
           src={trip.image}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-black/20" />
+        <div className="absolute inset-0 bg-linear-to-t from-black/90 via-black/30 to-black/20" />
 
         <div className="relative z-10 h-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col justify-end pb-12 md:pb-16">
           <Link
@@ -176,7 +176,7 @@ export default async function TripDetailPage({ params }: TripPageProps) {
               rel="noreferrer"
               target="_blank"
             >
-              <MessageCircleIcon className="h-[18px] w-[18px]" />
+              <MessageCircleIcon className="h-4.5 w-4.5" />
               Ask on WhatsApp
             </a>
 
@@ -222,7 +222,7 @@ export default async function TripDetailPage({ params }: TripPageProps) {
           rel="noreferrer"
           target="_blank"
         >
-          <MessageCircleIcon className="h-[18px] w-[18px]" />
+          <MessageCircleIcon className="h-4.5 w-4.5" />
         </a>
       </div>
     </div>
@@ -325,9 +325,9 @@ function ChecklistCard({
         {items.map((item) => (
           <li className="flex gap-3 text-sm text-brand-ink/80" key={item}>
             {icon === "check" ? (
-              <CheckIcon className="h-[18px] w-[18px] text-green-600 shrink-0 mt-0.5" />
+              <CheckIcon className="h-4.5 w-4.5 text-green-600 shrink-0 mt-0.5" />
             ) : (
-              <XIcon className="h-[18px] w-[18px] text-red-500 shrink-0 mt-0.5" />
+              <XIcon className="h-4.5 w-4.5 text-red-500 shrink-0 mt-0.5" />
             )}
             {item}
           </li>
@@ -393,7 +393,7 @@ function ArrowLeftIcon({ className }: IconProps) {
   );
 }
 
-function CalendarIcon({ className = "h-[18px] w-[18px]" }: IconProps) {
+function CalendarIcon({ className = "h-4.5 w-4.5" }: IconProps) {
   return (
     <svg
       aria-hidden="true"
@@ -430,7 +430,7 @@ function CheckIcon({ className }: IconProps) {
   );
 }
 
-function ClockIcon({ className = "h-[18px] w-[18px]" }: IconProps) {
+function ClockIcon({ className = "h-4.5 w-4.5" }: IconProps) {
   return (
     <svg
       aria-hidden="true"
@@ -483,7 +483,7 @@ function MessageCircleIcon({ className }: IconProps) {
   );
 }
 
-function MountainIcon({ className = "h-[18px] w-[18px]" }: IconProps) {
+function MountainIcon({ className = "h-4.5 w-4.5" }: IconProps) {
   return (
     <svg
       aria-hidden="true"
@@ -500,7 +500,7 @@ function MountainIcon({ className = "h-[18px] w-[18px]" }: IconProps) {
   );
 }
 
-function UsersIcon({ className = "h-[18px] w-[18px]" }: IconProps) {
+function UsersIcon({ className = "h-4.5 w-4.5" }: IconProps) {
   return (
     <svg
       aria-hidden="true"
