@@ -3,8 +3,12 @@ import Image from "next/image";
 import type { SVGProps } from "react";
 
 export const metadata = {
-  title: "About Us | Raahi Trail",
-  description: "Learn more about Raahi Trail and our curated group trips.",
+  title: "About Raahi Trail",
+  description:
+    "Meet Raahi Trail, a community-first travel company curating honest group trips, treks and offbeat experiences across India.",
+  alternates: {
+    canonical: "/about",
+  },
 };
 
 const whatsappHref =

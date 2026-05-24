@@ -3,9 +3,18 @@ import { getTripDestinationsFromDb, queryTripsFromDb } from "../../lib/tripsDb";
 import TripsPageClient from "./TripsPageClient";
 
 export const metadata: Metadata = {
-  title: "Trips - Raahi Trail",
+  title: "Group Trips & Treks in India",
   description:
-    "Browse curated group trips and treks across India with Raahi Trail.",
+    "Browse curated group trips, treks and backpacking experiences across India. Filter by destination, budget and duration with Raahi Trail.",
+  alternates: {
+    canonical: "/trips",
+  },
+  openGraph: {
+    title: "Group Trips & Treks in India | Raahi Trail",
+    description:
+      "Browse curated group trips, treks and backpacking experiences across India.",
+    url: "/trips",
+  },
 };
 
 export default async function TripsPage() {

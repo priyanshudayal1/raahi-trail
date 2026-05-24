@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
+import { absoluteUrl, siteConfig } from "../../../lib/site";
 import { getTripBySlugFromDb, getTripsFromDb } from "../../../lib/tripsDb";
 import { formatCurrency, type Trip } from "../../../lib/trips";
 
@@ -37,8 +38,41 @@ export async function generateMetadata({
   }
 
   return {
-    title: `${trip.title} - Raahi Trail`,
-    description: trip.tagline,
+    title: trip.title,
+    description: `${trip.tagline}. ${trip.durationDays} day ${trip.destination}, ${trip.region} group trip from ${formatCurrency(trip.price)} with Raahi Trail.`,
+    alternates: {
+      canonical: `/trips/${trip.slug}`,
+    },
+    keywords: [
+      trip.title,
+      `${trip.destination} trip`,
+      `${trip.region} trip`,
+      `${trip.destination} group trip`,
+      `${trip.destination} trek`,
+      trip.difficulty,
+      "Raahi Trail",
+    ],
+    openGraph: {
+      type: "website",
+      url: `/trips/${trip.slug}`,
+      title: `${trip.title} | Raahi Trail`,
+      description: trip.tagline,
+      siteName: siteConfig.name,
+      images: [
+        {
+          url: trip.image,
+          width: 1200,
+          height: 630,
+          alt: trip.title,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${trip.title} | Raahi Trail`,
+      description: trip.tagline,
+      images: [trip.image],
+    },
   };
 }
 
@@ -54,12 +88,46 @@ export default async function TripDetailPage({ params }: TripPageProps) {
     `Hi Raahi Trail! I'm interested in ${trip.title}. Can you share more details?`,
   );
   const whatsappHref = `https://wa.me/919999999999?text=${whatsappText}`;
+  const tripJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "TouristTrip",
+    name: trip.title,
+    description: trip.tagline,
+    image: [trip.image, ...trip.gallery].filter(Boolean),
+    url: absoluteUrl(`/trips/${trip.slug}`),
+    touristType: "Group travelers",
+    itinerary: {
+      "@type": "ItemList",
+      itemListElement: trip.itinerary.map((day) => ({
+        "@type": "ListItem",
+        position: day.day,
+        name: day.title,
+        description: day.description,
+      })),
+    },
+    offers: {
+      "@type": "Offer",
+      price: trip.price,
+      priceCurrency: "INR",
+      availability: "https://schema.org/InStock",
+      url: absoluteUrl(`/trips/${trip.slug}`),
+    },
+    provider: {
+      "@type": "TravelAgency",
+      name: siteConfig.name,
+      url: siteConfig.url,
+    },
+  };
 
   return (
     <div
       className="pt-16 md:pt-20"
       data-testid={`trip-detail-${trip.slug}`}
     >
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(tripJsonLd) }}
+      />
       <section className="relative h-[60vh] md:h-[80vh] overflow-hidden bg-brand-ink">
         <Image
           alt={trip.title}

@@ -1,9 +1,12 @@
-import type { SVGProps } from "react";
+﻿import type { SVGProps } from "react";
 
 export const metadata = {
-  title: "Raahi Trail — Stop Planning. Start Experiencing.",
+  title: "Contact Raahi Trail",
   description:
-    "Raahi Trail — Curated group trips & treks across India. Spiti, Kashmir, Ladakh, Meghalaya & more. Plan mat karo. Bas nikal jao.",
+    "Contact Raahi Trail to ask about upcoming group trips, custom travel plans, trek batches and WhatsApp support.",
+  alternates: {
+    canonical: "/contact",
+  },
 };
 
 const phoneDisplay = "+91 99999 99999";
@@ -38,7 +41,7 @@ export default function ContactPage() {
       <section className="bg-white py-20 md:py-28 border-b border-black/5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <p className="text-xs uppercase tracking-[0.2em] font-bold text-brand-green mb-3">
-            ✶ Get in touch
+            âœ¶ Get in touch
           </p>
           <h1 className="font-display font-bold text-5xl md:text-6xl lg:text-7xl text-brand-ink tracking-tight leading-[0.95] max-w-4xl">
             Baat karni hai?{" "}
@@ -61,7 +64,7 @@ export default function ContactPage() {
           >
             <div>
               <div className="inline-flex items-center gap-2 bg-white/15 backdrop-blur px-3 py-1 rounded-full text-xs uppercase tracking-widest font-bold">
-                Fastest way →
+                Fastest way â†’
               </div>
               <h2 className="font-display font-bold text-4xl md:text-5xl mt-6 leading-[0.95] tracking-tight">
                 Ping us on
